@@ -1269,3 +1269,14 @@ A minimal Settings screen, from Home's menu: change the Movies and TV Shows fold
 - **A series that contains an L** also gets the full check in its series review, run on `main` by /next.
 
 **Reason:** one definition of the sizes keeps Kettle Video and Enamel working the same way, and the full check is the slowest step of a build.
+
+## 2026-11-25 — The size rules point to handbook 1.1.0
+
+**Decision:** the Enamelware handbook 1.1.0 holds five size rules the commands used to carry themselves: changing where the app keeps or looks for its data is past an S; each repo names its own files behind the limits in its CLAUDE.md; the size is checked again before the checks start; no bundled issue waits on an unbuilt issue outside the bundle; a series gets a second follow-up before it is blocked. Kettle Video now points to the handbook's `enamelware:operations` skill ("Sizes") for them.
+
+- **Kettle Video's files behind the limits** (the data folder, `settings.json`, the tokens, `launch.sh`, `backend/server.py`, privacy and the licence files) move from `.claude/commands/next.md` to one line in `CLAUDE.md`, "How we work", as the handbook asks. `next.md` and `draft.md` point there.
+- **`next.md` no longer repeats the handbook's S limits** or "sizes only go up"; it points to the handbook.
+- **Three rules stay in `next.md`, short, because /next acts on them step by step:** the size is checked again before step 8, a bundle skips cards waiting on an unbuilt issue outside it, and a series' second failing follow-up is blocked. They already matched the handbook's wording in meaning.
+- No rule changed meaning.
+
+**Reason:** one source for the shared rules keeps them from drifting apart; the file list is the one part only this repo can know.
