@@ -1280,3 +1280,14 @@ A minimal Settings screen, from Home's menu: change the Movies and TV Shows fold
 - No rule changed meaning.
 
 **Reason:** one source for the shared rules keeps them from drifting apart; the file list is the one part only this repo can know.
+
+## 2026-11-25 — Decisions follow the handbook's three levels
+
+**Decision:** Claude Code's choices follow the handbook's three levels (`enamelware:decisions`, "Three levels"), which settles two disagreements the handbook work listed.
+
+- **Decide:** reversible, inside the spec, invisible to users or exactly what the spec describes. Just decided, with a decision-log entry only if a future reader would ask "why?". No comment and no label.
+- **Decide and flag:** reversible, but someone may disagree, or a rule had to be read one way. Only these get the "Decided:" comment and the `decided` label, so the label marks the choices worth a second look.
+- **Escalate:** the hard stops. One of them is new to Kettle Video's own list: a spec that can be read two ways when the readings would look different to the user is a scope question for the designer. /next asks one plain-language question with numbered options and a recommendation, adds `blocked` and moves on. A spec whose readings look the same to the user is still decided.
+- `CLAUDE.md` keeps only the comment format and the label; /next and the reviewer point to the handbook. Past issues keep their labels.
+
+**Reason:** the handbook is the one source for how Enamelware repositories decide, and flagging every choice buried the few worth reviewing.
