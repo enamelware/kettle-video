@@ -173,6 +173,23 @@ class PatternsWithoutTheList(unittest.TestCase):
         # Only new files: a picture already tracked is not reported again on a change.
         self.assertEqual(privacy_guard.path_findings("docs/shot.png", matcher, added=False), [])
 
+    def test_the_screenshots_folder_is_approved_and_nothing_beside_it(self):
+        # The README's screenshots change often, so the folder is approved (the
+        # v1.0.0 release work); a folder of the repo, never a device's path.
+        matcher = privacy_guard.Matcher({})
+        for path in ("docs/screenshots/home.png", "docs/screenshots/design-system/x-w320.png"):
+            with self.subTest(path=path):
+                self.assertEqual(privacy_guard.path_findings(path, matcher), [])
+        for path in ("docs/screenshots.png", "docs/screenshots-old/home.png", "docs/spikes/shot.png",
+                     "screenshots/home.png"):
+            with self.subTest(path=path):
+                self.assertEqual(privacy_guard.path_findings(path, matcher),
+                                 ["picture outside the approved folders"])
+        for folder in privacy_guard.APPROVED_PICTURE_FOLDERS:
+            with self.subTest(folder=folder):
+                self.assertFalse(folder.startswith(("/", "~")), "approved folders are repo folders")
+                self.assertTrue(folder.endswith("/"))
+
 
 class MissingOrEmptyList(GuardTestCase):
 

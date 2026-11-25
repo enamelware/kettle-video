@@ -31,6 +31,72 @@ Useful lines: `page loaded N s after launch` (start-up time), `firefox closed cl
 - Whether Firefox is a system install or the Flatpak on each device (`launch.sh` detects this automatically and logs which it found).
 - Whether mpv is a system install or the Flatpak on each device (also auto-detected and logged).
 
+## A development copy
+
+What a development copy (this git folder) needs beyond the [README](../README.md), which describes an installed copy.
+
+### Setting it up
+
+Setting up a new device, step by step (tools, getting the code, adding to Steam, controller layout, troubleshooting): see [`device-setup.md`](device-setup.md). The short version:
+
+Run the app: on first launch it asks for your Movies and TV Shows folders and saves them in `settings.json`, creating the file if there is none. To change them later, open the menu (the **Menu** button at the top, or Start) and choose **Settings** (see [Settings](user-guide.md#settings)). To set things by hand instead:
+
+```
+cp settings.example.json settings.json
+```
+
+Edit `settings.json` and fill in your real `movies_path` and `tv_path` (with both left empty, the app asks at launch). Leave `mpv_command` as `"auto"` unless you need to point at a specific mpv binary. `mpv_args` is an optional list of extra flags passed straight to mpv, e.g. `["--hwdec=auto"]`, for testing decode settings without editing code — leave it as `[]` normally. `resume` (`true` by default) controls whether films continue where you stopped them; see [Resume](user-guide.md#resume). `keep_awake` (`true` by default) keeps the device awake while a film is open; see [Watching movies](user-guide.md#watching-movies).
+
+### Running it
+
+```
+./launch.sh
+```
+
+This starts the backend, opens Firefox in kiosk mode pointed at it, and closes everything down again when you choose **Quit** in the menu (`q` or B opens it with Quit chosen; press Enter or A) (or when either the backend or Firefox is closed by any other means — whichever goes first takes the other down with it).
+
+For day-to-day development without the kiosk wrapper, see [Iterating on the UI/backend without the kiosk wrapper](#iterating-on-the-uibackend-without-the-kiosk-wrapper) above.
+
+### Adding a development copy to Steam
+
+On the Steam Deck, Steam's own "Browse" button (**My Library → Add a Non-Steam Game → Browse**) works fine — just point it at `launch.sh`.
+
+On the Nova, that same "Browse" button doesn't work, so instead:
+
+```
+./install-shortcut.sh
+```
+
+This writes a `kettle-video-dev.desktop` entry to `~/.local/share/applications/`, named **Kettle Video (dev)**. Restart Steam (or just reopen the dialog), go to **My Library → Add a Non-Steam Game**, and "Kettle Video (dev)" will already be listed — no Browse needed.
+
+**A development copy and an installed copy on one device** each have their own app menu entry: **Kettle Video (dev)** (`kettle-video-dev.desktop`) opens the development copy and **Kettle Video** (`kettle-video.desktop`) the installed one. Neither script changes or removes the other's entry, and Steam shortcuts you already made keep working. Earlier versions of `install-shortcut.sh` wrote `kettle-video.desktop` themselves; running it again moves that entry to its own name (only if it opens this copy). Until then, the installer leaves that entry as it is, says so and doesn't add its own (run `install-shortcut.sh` again, then the installer); the uninstaller leaves it as it is too. `install-shortcut.sh` refuses to run in an installed copy, which already has its entry.
+
+### Updating by running the installer again
+
+Running the installer again always works, also when Update and restart isn't offered: put the newer release's `install.sh`, archive and `.sha256` file in one folder and run `bash install.sh` there. Both ways use the same steps:
+
+- It finds the installed copy, prints the version you have and the one in the archive, and replaces only the app files. Your library, settings, resume positions, Continue watching and logs are never touched.
+- The archive is checked against its checksum before anything changes.
+- An older archive than the version you have gets a warning and a question first; anything but yes changes nothing.
+- The version you have is kept until the new one has **started cleanly**: its server starts, its page and every file the page needs load, and it answers. If that or any install step fails, the previous version is put back and the installer says so. Nothing to do on your side: Kettle Video opens as before.
+- If the device loses power during an update, Kettle Video is either the old version or the new one, never a mix; the next run of the installer tidies up what was left.
+
+### Third-party code
+
+The filename parser uses [guessit](https://github.com/guessit-io/guessit) and its dependencies. They are bundled, unmodified, in `vendor/`, so nothing needs to be installed with pip. `THIRD_PARTY_LICENSES.md` lists each one with its version, license and source, and mpv, which is used but not bundled. The Settings screen's About section shows the same list.
+
+The Kettle wordmark on the loading screen uses the Rubik Mono One font (SIL Open Font License 1.1). It is bundled, unmodified, in `ui/fonts/` with its license file and is never loaded online; it's listed in `THIRD_PARTY_LICENSES.md` too.
+
+The design system (Enamel, MIT) is vendored in `vendor/enamel/`; see [Design system](#design-system).
+
+### Design system
+
+The app's styling comes from the design system for the Kettle apps, **Enamel** (MIT licence, the designer's own project, [github.com/enamelware/enamel](https://github.com/enamelware/enamel)). Its two stylesheets, its behaviour script, its `DESIGN.md`, `VERSION`, `LICENSE`, `NOTICE.md` and `MIGRATION.md` are copied, unchanged, into `vendor/enamel/`, and the page loads both stylesheets before the app's own. Nothing is loaded online.
+
+The Enamel release the app has adopted is pinned in one place, `ENAMEL_PIN` at the repo's root (its release tag, such as `v0.7.0`). The copy in `vendor/enamel/` must match that tag exactly, and the design system check compares with that tag only, never with Enamel's main branch or its latest release, so a new Enamel release can't fail an unrelated issue. Upgrades are their own issue: when Enamel publishes a newer release, `/next all` drafts one "Bring in Enamel <version>" issue.
+
+To take a newer Enamel (in that issue only), check its `CHANGELOG.md` for the version Kettle Video should adopt, then run `python3 tools/update_enamel.py 0.7.0` (with that version) on a device that has Enamel at `~/Development/enamel` (or still under its old folder name; or give another folder as a second argument). It reads the files from that version's release tag (`v0.7.0`), never from Enamel's folder as it happens to be, so work in progress there can't come in by mistake. It copies only the files that changed, prints the old and new version, moves the pin in `ENAMEL_PIN` to the new tag, and never changes Enamel itself. The tests compare the app's copy with the pinned tag, and are skipped with a plain reason where Enamel or that tag isn't on the device. Never edit the copies in `vendor/enamel/` by hand; then update the version in `THIRD_PARTY_LICENSES.md` and run the tests.
+
 ## Tests
 
 From the repo root:
@@ -59,7 +125,7 @@ The repo works on any Linux machine with Python 3.10 or later; the Steam Deck an
 
 ### Privacy guard
 
-`tools/privacy_guard.py` (the privacy guard work) keeps anything from the designer's devices, library or accounts out of the repo. It checks text against a private word list kept outside both Kettle repos, `~/Development/.privacy-guard/words.txt` (card labels, the user name, film and show names, device, network and Bluetooth names, Steam IDs; never committed, printed or pasted), and also catches, with no list: home folders written out in full (write `~/` or `<user>`), Steam user folders and IDs, email addresses other than GitHub's noreply ones and the commits' attribution address (`noreply@anthropic.com`), and new pictures or logs outside the approved folders. A finding names the file, the line and the kind of thing, never the word. If the list is missing or empty, the guard fails.
+`tools/privacy_guard.py` (the privacy guard work) keeps anything from the designer's devices, library or accounts out of the repo. It checks text against a private word list kept outside both Kettle repos, `~/Development/.privacy-guard/words.txt` (card labels, the user name, film and show names, device, network and Bluetooth names, Steam IDs; never committed, printed or pasted), and also catches, with no list: home folders written out in full (write `~/` or `<user>`), Steam user folders and IDs, email addresses other than GitHub's noreply ones and the commits' attribution address (`noreply@anthropic.com`), and new pictures or logs outside the approved folders (pictures: `docs/screenshots/`, `ui/` and `vendor/`; no check looks inside a picture, so each screenshot is looked at before it is committed, see `docs/screenshots/README.md`). A finding names the file, the line and the kind of thing, never the word. If the list is missing or empty, the guard fails.
 
 - The quick and full checks start with it on every tracked file (`scripts/test.sh privacy` runs it alone).
 - `python3 tools/install_privacy_hooks.py` puts it in front of every commit (the files and the message) and every push, in this clone. Run it once per clone; never bypass the hooks with `--no-verify`.

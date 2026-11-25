@@ -78,8 +78,12 @@ ALLOWED_EMAIL = re.compile(r"(?i)^(git@github\.com|[^@]+@users\.noreply\.github\
 PICTURES = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".heic", ".avif",
             ".tif", ".tiff"}
 LOGS = {".log"}
-# Pictures the checks make from invented test data, and the app's own.
-APPROVED_PICTURE_FOLDERS = ("docs/screenshots/design-system/", "ui/", "vendor/")
+# Screenshots (the README's, from the Blender open movies, and the checks'
+# own from invented test data, in design-system/), and the app's own pictures.
+# Repo folders only, the same on every copy: never a device's path. No check
+# looks inside a picture, so each screenshot is looked at before it is committed
+# (docs/screenshots/README.md).
+APPROVED_PICTURE_FOLDERS = ("docs/screenshots/", "ui/", "vendor/")
 APPROVED_LOG_FOLDERS = ()
 # Third-party files, copied unchanged: their authors' addresses and paths stay.
 THIRD_PARTY = ("vendor/", "ui/fonts/")

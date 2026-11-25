@@ -8,6 +8,19 @@ and everything under it up to the next `## ` line.
 This file starts at 0.1.0-dev (the release script work). Earlier history is in
 `docs/decisions.md` and git's log.
 
+## 1.0.0
+
+The first public release.
+
+- Browse the movies and TV shows on your device with the controller, in Gaming Mode, and play them in mpv.
+- Films continue where you stopped them, and a Continue watching row shows what you're partway through, with the frame where you stopped.
+- The first launch checks for mpv, asks for your Movies and TV Shows folders, and reads them.
+- TV shows are in beta: each show opens one list of its episodes.
+- Settings: change either folder, see the version and every third-party credit, and check for updates.
+- Install, update and uninstall: `install.sh` installs in your home folder with no password, Check for updates then Update and restart updates from inside the app, and `installer/uninstall.sh` removes it and keeps your data unless you ask.
+- Never online by itself: only Check for updates and Update and restart go online, when you choose them.
+- A README for people using the app, a user guide, and screenshots.
+
 ## 0.1.0-dev
 
 The first version built for installing, still in development.

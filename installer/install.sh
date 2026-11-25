@@ -281,4 +281,4 @@ else
 fi
 say "3. In Gaming Mode, open $APP_NAME in your Library, choose the controller icon and set"
 say "   its controller layout again: Steam keeps a layout for each shortcut. Which button"
-say "   sends which key is in the README, under \"Installing\"."
+say "   sends which key is in the README, under \"Adding it to Steam\"."

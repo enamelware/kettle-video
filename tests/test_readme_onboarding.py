@@ -26,19 +26,20 @@ def section(title):
 
 
 class ReadmeOnboardingTest(unittest.TestCase):
-    def test_limitations_no_longer_list_onboarding_as_not_built(self):
-        limits = section("Current limitations")
-        not_built = limits.split("Not built yet:", 1)
-        self.assertEqual(len(not_built), 2, "the 'Not built yet:' list is missing")
-        missing_list = not_built[1].split(". ", 1)[0]
-        self.assertNotIn("onboarding", missing_list.lower())
-        self.assertNotIn("rest of onboarding", limits.lower())
+    # Since the first public release's README (the v1.0.0 release work) the
+    # first launch is described under Installing, and nothing is listed as
+    # not built: the README describes only what ships.
+    def test_nothing_is_listed_as_not_built(self):
+        text = README.read_text(encoding="utf-8")
+        self.assertNotIn("Not built yet", text)
+        self.assertNotIn("rest of onboarding", text.lower())
 
-    def test_limitations_describe_the_onboarding_steps(self):
-        limits = section("Current limitations").lower()
-        self.assertIn("onboarding", limits)
-        for step in ("mpv", "choose", "scan"):
-            self.assertIn(step, limits)
+    def test_installing_describes_the_onboarding_steps(self):
+        first = section("Installing").split("On the first launch", 1)
+        self.assertEqual(len(first), 2, "Installing doesn't describe the first launch")
+        steps = first[1].lower()
+        for step in ("checks for mpv", "asks for your movies and tv shows folders", "reads them"):
+            self.assertIn(step, steps)
 
     def test_mpv_missing_mentions_look_again_and_quitting(self):
         requirements = section("Requirements")

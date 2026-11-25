@@ -1291,3 +1291,15 @@ A minimal Settings screen, from Home's menu: change the Movies and TV Shows fold
 - `CLAUDE.md` keeps only the comment format and the label; /next and the reviewer point to the handbook. Past issues keep their labels.
 
 **Reason:** the handbook is the one source for how Enamelware repositories decide, and flagging every choice buried the few worth reviewing.
+
+## 2026-11-25 — The first public release: a README for users, screenshots and a draft (the v1.0.0 release work)
+
+**Decision:** Kettle Video 1.0.0 is prepared as its first public release, with a README for people using the app, screenshots, and a draft release on GitHub that waits for the designer's yes.
+
+- **The README is for users**, in short sections: what it is, requirements, installing, adding it to Steam, controls, TV shows in beta, Settings, updating from inside the app, uninstalling, privacy, reporting a bug, logs, the licence and the screenshot credits, ending with the Valve trademark line. It describes only what ships in 1.0.0. The longer user details move to `docs/user-guide.md`; the development copy's setup, running it, updating by running the installer again, third-party code and the design system move to `docs/dev-environment.md`, "A development copy".
+- **Screenshots** are taken from the app on the Blender open movies library, in headless Firefox, with a copy of the saved library so the real one is untouched. Frames from Tears of Steel stay out (its live-action frames are kept out of anything promotional), and only films that appear are credited.
+- **Credits:** each film with the licence version it was released under (Elephants Dream CC BY 2.5; Big Buck Bunny, Sintel and Tears of Steel CC BY 3.0; Caminandes 2 CC BY 4.0), linked to the licence, and the credit line "(CC) Blender Foundation | studio.blender.org". The films' Blender Studio pages state no licence, and the site's general terms give CC BY 4.0 "unless notified otherwise"; the designer chose the released versions. The screenshots are under the films' licences, not the GPL, and nothing implies the Blender Foundation's endorsement.
+- **The privacy guard approves the whole `docs/screenshots/` folder** for pictures, not single files: the designer changes the screenshots often, also by hand. It is a folder of the repo, never a device's path. No check looks inside a picture, so each screenshot is looked at before it is committed, and a test fails if a picture in the folder isn't shown in the README.
+- **The draft release is made without pushing the tag**, so nothing is public before the yes: GitHub creates the tag when the draft is published.
+
+**Reason:** a stranger arriving at the repo needs to know what the app does and how to install it before anything else, and a first release is published only with the designer's yes.
