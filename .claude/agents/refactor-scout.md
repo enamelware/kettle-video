@@ -32,7 +32,7 @@ You look for the refactors most worth doing in Kettle: changes to how the code i
 
 ## Rules for a proposal
 
-- **Behaviour stays the same.** Nothing a viewer sees or does changes. No class name or `data-` hook renamed (they are a public API for snippets), no new dependency, nothing that could touch media files. If a worthwhile change needs one of these, leave it out.
+- **Behaviour stays the same.** Nothing a viewer sees or does changes. No new dependency, nothing that could touch media files. If a worthwhile change needs one of these, leave it out.
 - **Skip anything that overlaps an open or blocked issue** (same files or same behaviour), and anything an existing `refactor` issue, open or closed, already covers.
 - Each is `size:S` or `size:M`; anything bigger, split or leave out. Most valuable first, at most the number in your prompt. Fewer is fine; none is fine.
 - Every claim points at real code you read (file and function). No guesses.

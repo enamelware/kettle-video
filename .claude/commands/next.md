@@ -86,7 +86,7 @@ Issues that /draft split from one feature share a label `series: <name>` and lin
 
 A run can stop at any moment: usage limit, the session closed, the Deck turned off. Everything below is built so that the next /next can pick up where it stopped:
 
-- **One branch per issue** (or per bundle of small issues), named `issue-N`, started from the latest `main`. Work in progress is committed and pushed to that branch at each checkpoint. `main` only ever receives finished work: merged once the checking agents of its size say PASS and the quick check passes on the final code. The Nova's auto-update pulls `main`, so nothing half-done may reach it.
+- **One branch per issue** (or per bundle of small issues), named `issue-N`, started from the latest `main`. Work in progress is committed and pushed to that branch at each checkpoint. `main` only ever receives finished work: merged once the checking agents of its size say PASS and the quick check passes on the final code. The test devices are updated by hand from `main`, so nothing half-done may reach them.
 - **One progress comment per issue**, edited in place at each checkpoint (see "Progress comment").
 - **Every step is safe to repeat.** Before moving a card, pushing, merging, commenting or labelling, check whether it already happened. A resume never duplicates a comment, a commit or a board move.
 - **Never start a new issue while there are uncommitted changes from another one.**
@@ -233,7 +233,7 @@ For each unfinished issue N, in issue-number order:
 Issues labelled `refactor` (proposed by refactor-scout through /tidy, approved by the owner moving them to Ready for dev) change how the code is organised, never what the app does. On top of the steps above:
 - **Tests pass before:** right after step 4, run the quick check on the fresh branch before changing anything, naming the checks for the code the refactor touches. If it fails, handle as Blocked ("the tests already fail before the refactor"); never refactor on a failing suite.
 - **Tests first:** if the issue's "How the tests cover it" names behaviour without a test, add those tests first and see them pass on the unchanged code.
-- **Behaviour stays the same:** nothing a viewer sees or does changes, no class name or `data-` hook renamed, and no existing test loosened or removed (tests may be added or moved, checking the same things). Anything else is a hard stop (a product change nobody asked for).
+- **Behaviour stays the same:** nothing a viewer sees or does changes, and no existing test loosened or removed (tests may be added or moved, checking the same things). Anything else is a hard stop (a product change nobody asked for).
 - **Tests pass after:** the quick check on the final code, as always, and the full check at the end of `/next all` (see "Full check").
 - The testing comment's exploratory checks are a short smoke check ("nothing visible should change").
 

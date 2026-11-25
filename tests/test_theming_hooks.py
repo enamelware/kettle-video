@@ -3,7 +3,8 @@
 
 """Theming hooks list (the docs catch-up): every class name, id, data- marker and
 data-kind value the page uses must appear in docs/spec.md's "Theming hooks"
-section, so the public snippet API is fully documented.
+section, so the list stays complete. The hooks are internal and may change
+(the pre-launch clean-up); the list only has to match the page.
 
 Run from the repo root:  python3 -m unittest discover -s tests -t . -v
 """

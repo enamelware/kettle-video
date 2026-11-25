@@ -1220,3 +1220,12 @@ A minimal Settings screen, from Home's menu: change the Movies and TV Shows fold
 - **Each device moves to a fresh clone** of the public repo; a clone of the archive is never pushed to the public repo.
 
 **Reason:** a public repo can be cached or copied the moment it holds anything, so only a copy that has already passed every check goes up, and nothing of the private history can follow it.
+
+## 2026-11-25 — Snippet hooks are internal for now (the pre-launch clean-up)
+
+**Decision:** the class names, ids and `data-` attributes listed in `docs/spec.md` ("Theming hooks") are internal and may change. They are no longer a public API, and nothing promises snippet authors they will stay the same. The designer decided this on 2026-11-19, when theming snippets were taken off the backlog. The list itself stays and stays complete (`tests/test_theming_hooks.py` still checks it), so a name that changes is updated there in the same commit. The reviewer and refactor rules that treated a hook rename as a breaking change are gone; a refactor still changes nothing a viewer sees or does.
+
+- **If theming returns**, a stable set of hooks is defined again then, as part of that work, and only those are promised to snippet authors.
+- **Nothing was renamed** in this change.
+
+**Reason:** no user can load a snippet, so keeping every internal name frozen for authors who can't exist only made refactors harder.
