@@ -1,9 +1,9 @@
 ---
-description: Idle work for the Kettle board, on its own or at the end of /next all. Has test-writer add up to 2 missing tests or doc fixes (each on its own branch, checked by test-checker and reviewer, merged into main), reported on one "tests" issue in Ready for testing; then has refactor-scout propose up to 3 refactors as Drafted "refactor" issues.
-argument-hint: ""
+description: Idle work for the Kettle board, run only when the owner starts it (/next all no longer runs it). Has test-writer add up to 2 missing tests or doc fixes (each on its own branch, checked by test-checker and reviewer, merged into main), reported on one "tests" issue in Ready for testing; then has refactor-scout propose up to 3 refactors as Drafted "refactor" issues (on Sonnet; "/tidy deep" runs it on Opus).
+argument-hint: "[deep]"
 ---
 
-Idle work: small tests and docs improvements, then refactor proposals. Never changes what the app does.
+Idle work: small tests and docs improvements, then refactor proposals. Never changes what the app does. Argument: $ARGUMENTS
 
 Follow CLAUDE.md throughout, especially "How we work", "Testing" and "How to talk to me", and the shared rules in `.claude/commands/next.md` ("Safe to interrupt", "Progress comment", "Blocked", step 8 and step 9), which apply here as written unless this file says otherwise. Board changes only through `scripts/board.sh`; tests only through `scripts/test.sh`. One simple command at a time: no `&&`, `;` or pipes, no `cd`, no `export`. Run git from this repo's folder without `git -C`; read Enamel's repo only with `scripts/peek.sh`.
 
@@ -48,7 +48,7 @@ Follow CLAUDE.md throughout, especially "How we work", "Testing" and "How to tal
 
 ## B. Refactor proposals (at most 3)
 
-1. Run the `refactor-scout` agent (`subagent_type` `refactor-scout`) with: `At most 3 proposals.` If it says NOTHING WORTH PROPOSING, note that for the report and finish.
+1. Run the `refactor-scout` agent (`subagent_type` `refactor-scout`) with: `At most 3 proposals.` Set the Agent tool's `model` to `sonnet`, to save allowance; only when the argument is `deep` ("/tidy deep"), set it to `opus` instead. If it says NOTHING WORTH PROPOSING, note that for the report and finish.
 2. For each proposal, check it again yourself before filing it: `gh issue list --state all --label refactor --json number,title,state` and `gh issue list --state open --json number,title,labels`. Drop it if it repeats an existing refactor issue or plainly overlaps an open or blocked issue, and note why for the report.
 3. File each one left: write its body to a file in the scratchpad (the scout's sections as given, then a last line `Proposed by refactor-scout during idle work, <YYYY-MM-DD>. Refactors keep the app's behaviour the same; /next builds them only after every other Ready for dev issue.`), then `gh issue create --title "<title>" --body-file <file> --label refactor --label <size>` (create the `refactor` label first if it is missing), `scripts/board.sh add N`, `scripts/board.sh status N Drafted`.
 

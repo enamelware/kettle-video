@@ -1,5 +1,5 @@
 ---
-description: Close open issues already in Done, resume any interrupted issue, then rework the top More to do issue on the Kettle board, or else build the top Ready for dev one (or a named one, or a bundle of small ones), on its own issue-N branch. Runs the checks its size calls for (reviewer for S and M; test-checker, reviewer and the full check for L) with the quick check, merges into main, pushes, and moves it to Ready for testing (a series waits for its series review). "all" or a number works through several issues in a row; "all" ends with idle work (/tidy) when nothing is left to build.
+description: Close open issues already in Done, resume any interrupted issue, then rework the top More to do issue on the Kettle board, or else build the top Ready for dev one (or a named one, or a bundle of small ones), on its own issue-N branch. Runs the checks its size calls for (reviewer for S and M; test-checker, reviewer and the full check for L) with the quick check, merges into main, pushes, and moves it to Ready for testing (a series waits for its series review). "all" or a number works through several issues in a row and stops when nothing is left to build (idle work runs only through /tidy).
 argument-hint: "[#N | all | N]"
 ---
 
@@ -137,7 +137,7 @@ Then, before taking anything new, look for unfinished work. Read step 1 first, t
 - For the current branch, `main` and every local `issue-*` branch: `git rev-list --count origin/<branch>..<branch>` (unpushed commits; a local branch with no copy on GitHub counts as unpushed).
 - The board (step 2's list): cards in **Building**.
 
-Each finding belongs to an issue N: `issue-N` branches by name, Building cards by number. A Building card whose progress comment names a bundle branch (`Branch: issue-N (bundle: …)`) belongs to that bundle, which is resumed as one. A Building card whose progress comment says `Next: series review` is **waiting**, not unfinished: leave it, unless every issue in its series is merged or closed, in which case the series review was interrupted: run it now (see "Series"). An issue with the `blocked` label is **parked**, not unfinished: leave its branch alone; it is picked up as normal once the owner removes the label (step 4 then continues from its branch). An issue labelled `tests` is idle work: /next leaves it to `.claude/commands/tidy.md` ("Resume"), which /next all runs at the end and /tidy runs on its own; in single mode, just mention it in the report.
+Each finding belongs to an issue N: `issue-N` branches by name, Building cards by number. A Building card whose progress comment names a bundle branch (`Branch: issue-N (bundle: …)`) belongs to that bundle, which is resumed as one. A Building card whose progress comment says `Next: series review` is **waiting**, not unfinished: leave it, unless every issue in its series is merged or closed, in which case the series review was interrupted: run it now (see "Series"). An issue with the `blocked` label is **parked**, not unfinished: leave its branch alone; it is picked up as normal once the owner removes the label (step 4 then continues from its branch). An issue labelled `tests` is idle work: /next leaves it to `.claude/commands/tidy.md` ("Resume"), which runs when the owner starts /tidy; just mention it in the report.
 
 Handle what you find in this order:
 
@@ -288,9 +288,9 @@ For each issue, the steps are the same as in single mode, with these differences
 
 **Stop** when no issue is left to take in More to do or Ready for dev (apart from blocked and skipped ones), or when N issues have reached Ready for testing.
 
-**Full check** (`/next all` only, once, after idle work): if anything was merged into `main` during the run, run `scripts/test.sh full` on `main` (everything: the whole unit suite with the timing tests, then every browser check). If it passes, note that for the report. If it fails, find from the commits which merged issue caused it: for each failing test or check, `git log --oneline` on the files it covers and on the test itself, back to where the run started, and pick the `Refs #N:` commit that changed them (if several could have, the latest one). Move that issue to More to do (`scripts/board.sh status N "More to do"`) with a plain-language comment: what failed, why that issue is the likely cause, and that the next /next will fix it. Nothing is released while the full check fails. `/next N` and single mode run only quick checks; the full check also runs before any `VERSION` bump or release (CLAUDE.md, "How we work").
+**Full check** (`/next all` only, once, at the end): if anything was merged into `main` during the run, run `scripts/test.sh full` on `main` (everything: the whole unit suite with the timing tests, then every browser check). If it passes, note that for the report. If it fails, find from the commits which merged issue caused it: for each failing test or check, `git log --oneline` on the files it covers and on the test itself, back to where the run started, and pick the `Refs #N:` commit that changed them (if several could have, the latest one). Move that issue to More to do (`scripts/board.sh status N "More to do"`) with a plain-language comment: what failed, why that issue is the likely cause, and that the next /next will fix it. Nothing is released while the full check fails. `/next N` and single mode run only quick checks; the full check also runs before any `VERSION` bump or release (CLAUDE.md, "How we work").
 
-**Idle work** (`/next all` only, not `/next N`): once nothing is left to take, follow `.claude/commands/tidy.md` from its step 0 (it resumes unfinished idle work first): up to 2 tests or docs improvements by test-writer, each fully checked and merged, reported on one `tests` issue in Ready for testing; then up to 3 refactor proposals by refactor-scout, filed in Drafted. Its report goes into the final report.
+**Idle work is paused.** Once nothing is left to take, `/next all` runs the full check and gives the final report; it never runs test-writer or refactor-scout. Idle work runs only when the owner starts `/tidy`.
 
 **Final report**, in plain language, no code or jargon:
 - **Housekeeping**: the issues closed because their cards were already in Done, or "nothing".
@@ -303,6 +303,5 @@ For each issue, the steps are the same as in single mode, with these differences
 - **Skipped**: one line per issue: `#N title`, and which issue it is waiting for.
 - **Left over** (only when the N limit was reached): how many issues are still waiting in More to do and Ready for dev.
 - **Full check** (`/next all` only): passed, failed (which issue went back to More to do, and why), or "not needed, nothing merged".
-- **Idle work** (`/next all` only): tidy.md's report: tests and docs (with their smoke check), refactor proposals filed, and anything found along the way.
 
 The `blocked` label is the owner's switch: once they remove it, the issue is picked up again by any /next as normal.

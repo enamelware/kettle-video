@@ -1239,3 +1239,11 @@ A minimal Settings screen, from Home's menu: change the Movies and TV Shows fold
 - **The test script's memory was tried, not changed.** After a pass, a changed file that wasn't committed and a new file that wasn't committed each made the check run again. Files git ignores aren't part of the key; no test's result depends on one (the tests that look at the real `settings.json` only confirm it stays untouched), so the key stays as it is. `tests/test_exact_commit_report.py` keeps checking all three cases against the script's own key.
 
 **Reason:** in Enamel, a builder once reported a pass the committed code didn't have; the reviewer caught it. A report must match the code it hands over.
+
+## 2026-11-25 — Idle work is paused; refactor-scout runs on Sonnet
+
+**Decision:** `/next all` no longer runs idle work. When More to do and Ready for dev have nothing left that isn't blocked, it runs the full check and gives its summary, and stops. `/tidy` works as before, but runs only when the designer starts it. When it does, refactor-scout runs on Sonnet, and on Opus only with `/tidy deep`. Both idle-work agents keep their files; building, reviewing and testing are unchanged.
+
+- **The model is chosen when `/tidy` starts the agent**, not in the agent's own file, which still names Opus: that is what `/tidy deep` asks for.
+
+**Reason:** to save allowance. Idle work ran on every `/next all` that cleared the board, whether or not anyone wanted it then.
