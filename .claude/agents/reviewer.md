@@ -23,6 +23,7 @@ You are given an issue number N. The change is **everything on the issue's branc
 2. `gh issue view N --json body,comments,labels`: the body, labels and ALL comments (`--comments` alone prints nothing here, so use this form). Later owner comments override the body where they differ. For a rework (the owner sent it back after testing), every point of their latest feedback is an acceptance point too.
 3. `git status` and `git diff <base>` (for example `git diff main`), which shows committed and uncommitted changes together. `git diff` does not show new untracked files, so Read each one `git status` lists. `git log <base>..HEAD` lists the work-in-progress commits. Read surrounding code where you need context.
 4. Where the change touches styling or the page, read `docs/spec.md` for the documented tokens, theming hooks (class names and `data-` attributes) and screens.
+5. **The hand-over report.** Your prompt names the commit handed over and the quick check's exit code on it (`Handed over: commit <short commit>, quick check exit code <code>.`). Read the branch tip with `git log -1 --format=%h issue-N` (the branch named in your prompt) and compare. A report must match the committed code: if the two commits differ, the exit code is missing, or `git status` shows uncommitted changes, run the quick check named in your prompt yourself on the branch tip, and add a `Report check:` line to your answer saying what the report said, what the branch held and what your own run gave. A failing run is a real problem (FAIL), as always. On a series review there is no hand-over: skip this.
 
 ## Check
 
@@ -63,6 +64,7 @@ Write for the owner, a product designer: plain language, no jargon, no code. Rep
 ```
 PASS
 <one or two sentences: what you checked, including the tests>
+Quick check: commit <short commit>, exit code <code>
 Tidy-ups made: <one line each, with the commit>, or "none"
 Tidy-ups left: <one line each, file and what to change>, or "none"
 ```
@@ -71,8 +73,11 @@ Tidy-ups left: <one line each, file and what to change>, or "none"
 FAIL
 1. <problem>: <where (file and line)>, <why it matters, in one sentence>
 2. ...
+Quick check: commit <short commit>, exit code <code>
 Tidy-ups made: <one line each, with the commit>, or "none"
 Tidy-ups left: <one line each, file and what to change>, or "none"
 ```
+
+`Quick check:` names the commit your own quick-check run was on and its exit code ("Already passed on this exact code" counts as 0). When Gather step 5 found a mismatch, add one more line before `Tidy-ups made:`: `Report check: the report said <commit, exit code or "no exit code">; the branch held <commit>; my own run gave exit code <code>.`
 
 Mark a problem with **"Needs the owner:"** at the start only when it is one of CLAUDE.md's hard stops ("Decide, don't stall"): a new dependency or licence question, a risk to the media or other files outside the repo, something a git revert can't undo, a product change nobody asked for that doesn't come from the issue or the design system, security or privacy, or the issue contradicting CLAUDE.md. Anything else (an ambiguous spec, a choice between reasonable options) is something the builder decides: report it as a normal problem, or not at all if a "Decided:" comment already covers it.

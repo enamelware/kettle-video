@@ -44,7 +44,8 @@ For an issue labelled `refactor`, the acceptance point is "behaviour unchanged":
 
 1. The quick check, naming the browser checks your prompt gives plus any other `tests/*_check.py` for the screens this change touches: `scripts/test.sh <name> <name>` (checks you wrote or changed are picked up without naming them). Skip one only if it cannot run here, and say why.
 2. On a `size:L` issue, also the full check: `scripts/test.sh full` (about half an hour; run it in the foreground with the longest command timeout). It too says so if it already passed on this exact code.
-3. It remembers passes against the exact code: anything that already passed and hasn't changed says so instead of running again. That counts as passing; never add `--again`.
+3. It remembers passes against the exact code: anything that already passed and hasn't changed says so instead of running again. That counts as passing (exit code 0); never add `--again`.
+4. Your report names the exact code your result is about, like every report: the commit the branch was on when you ran (`git log -1 --format=%h`) and the quick check's exit code, from a run after your last change to `tests/`. If you added or changed tests, say so: they are not committed yet, so the result covers that commit plus your uncommitted test files. A pass from before your last change doesn't count.
 
 ## Answer
 
@@ -55,6 +56,7 @@ PASS
 - <acceptance point>: covered by <test file>  (added / strengthened / already there)
 - <acceptance point>: not testable from the terminal (<why>)
 Suite: <number> tests, all passing.
+Quick check: commit <short commit> <"plus my uncommitted test files" | >, exit code <code>
 ```
 
 ```
@@ -62,6 +64,7 @@ FAIL
 1. <problem>: <which acceptance point, which test, what fails or is missing>
 2. ...
 Tests added or changed: <files, or "none">
+Quick check: commit <short commit> <"plus my uncommitted test files" | >, exit code <code>
 ```
 
 FAIL whenever any test fails, or an acceptance point that can be tested from the terminal still has no test that would catch it breaking.

@@ -1229,3 +1229,13 @@ A minimal Settings screen, from Home's menu: change the Movies and TV Shows fold
 - **Nothing was renamed** in this change.
 
 **Reason:** no user can load a snippet, so keeping every internal name frozen for authors who can't exist only made refactors harder.
+
+## 2026-11-25 — A test report names the commit it is about (the exact-commit report work)
+
+**Decision:** whoever hands an issue over for checking names the exact commit it hands over and quotes the exit code of the quick check run on that commit, after its last change. A pass from earlier code doesn't count; "Already passed on this exact code" does (exit code 0), since `scripts/test.sh` ties it to that exact code. The reviewer compares the named commit with the tip of the issue branch. When they differ, or the exit code is missing, it runs the quick check itself on the tip and its answer says what the report said, what the branch held and what its own run gave; /next puts that line on the issue. test-checker names the commit and the exit code of its own runs the same way, and /tidy hands test-writer's work over with the same commit and exit code.
+
+- **The reviewer reads the branch tip with `git log -1 --format=%h issue-N`**, which its guard already allows, so the guard was not widened for `git rev-parse`.
+- **The reviewer still posts nothing on issues**: its answer carries the mismatch line and /next posts it, keeping the reviewer's lane as it was.
+- **The test script's memory was tried, not changed.** After a pass, a changed file that wasn't committed and a new file that wasn't committed each made the check run again. Files git ignores aren't part of the key; no test's result depends on one (the tests that look at the real `settings.json` only confirm it stays untouched), so the key stays as it is. `tests/test_exact_commit_report.py` keeps checking all three cases against the script's own key.
+
+**Reason:** in Enamel, a builder once reported a pass the committed code didn't have; the reviewer caught it. A report must match the code it hands over.
