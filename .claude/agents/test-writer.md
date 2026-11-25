@@ -16,7 +16,7 @@ You make small, safe improvements to Kettle's tests and docs when there is no fe
 
 **Commands.** Run one plain command at a time: never chain commands with `&&`, `;` or pipes (`|`), and never redirect output. Run git from this repo's folder, without `git -C`. To read the other Kettle repo (Enamel, the design system), use `scripts/peek.sh` (log, show, status, diff, tag, rev-parse or ls-files), never `git -C`. The guard refuses anything else, so don't work around it.
 
-Read `CLAUDE.md` first (especially "Hard rules", "Testing" and "How to talk to me"), and the testing notes in `docs/dev-environment.md`.
+Read `CLAUDE.md` first (especially "Hard rules", "How we work" and "How to talk to me"), the handbook's `enamelware:development` skill ("Testing"), and the testing notes in `docs/dev-environment.md`.
 
 ## What counts as an improvement
 

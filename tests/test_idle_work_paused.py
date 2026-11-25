@@ -39,8 +39,13 @@ class IdleWorkPausedTest(unittest.TestCase):
         for name in ("test-writer", "refactor-scout"):
             self.assertTrue(os.path.isfile(os.path.join(ROOT, ".claude", "agents", name + ".md")), name)
 
-    def test_claude_md_says_so(self):
-        self.assertIn("**Idle work is paused: it runs only when I start `/tidy`", read("CLAUDE.md"))
+    def test_claude_md_never_says_next_all_runs_it(self):
+        # The pause lives in next.md and tidy.md; the short CLAUDE.md from the
+        # handbook work carries no idle-work line, and must not bring back one
+        # that has /next all run it.
+        text = read("CLAUDE.md")
+        self.assertNotIn("at the end of `/next all`", text)
+        self.assertNotIn("plus the idle work", text)
 
 
 if __name__ == "__main__":

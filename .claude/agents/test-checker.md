@@ -19,7 +19,7 @@ You are given an issue number N. The change is **everything on the issue's branc
 
 ## Gather
 
-1. Read `CLAUDE.md` ("Hard rules" and "Testing") and the testing notes in `docs/dev-environment.md`.
+1. Read `CLAUDE.md` ("Hard rules" and "How we work"), the handbook's `enamelware:development` skill ("Testing") and the testing notes in `docs/dev-environment.md`.
 2. `gh issue view N --json body,comments,labels`: the body, labels and ALL comments (`--comments` alone prints nothing here, so use this form). Later owner comments override the body. For a rework, every point of the owner's latest feedback is an acceptance point too.
 3. `git status` and `git diff <base>` (for example `git diff main`), which shows committed and uncommitted changes together; Read new untracked files. Read the existing tests that touch the same code.
 

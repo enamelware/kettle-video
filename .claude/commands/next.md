@@ -5,7 +5,7 @@ argument-hint: "[#N | all | N]"
 
 Build or rework issues end to end. Argument: $ARGUMENTS
 
-Follow CLAUDE.md throughout, especially "How we work", "Testing" and "How to talk to me".
+Follow CLAUDE.md throughout, especially "Hard rules", "How we work" and "How to talk to me", and the handbook plugin's skills (`enamelware:decisions` for deciding and hard stops, `enamelware:operations` for sizes, the board and the commands, `enamelware:development` for testing and git). This file holds the mechanics of /next that CLAUDE.md leaves out.
 
 **Modes**, from the argument:
 - *(empty)*: **single mode**, one issue picked from the board.
@@ -19,7 +19,7 @@ Single mode runs step 0, then steps 1 to 13 once (a bundle of small issues count
 
 ## Decide or block
 
-"The design system" means Enamel, vendored in `vendor/enamel/` (CLAUDE.md, "Decide, don't stall").
+"The design system" means Enamel, vendored in `vendor/enamel/` (CLAUDE.md, "Hard rules"). CLAUDE.md, "How we work", says when to decide yourself; the handbook's `enamelware:decisions` skill lists the hard stops every Enamelware repo shares, and the list below adds Kettle Video's own.
 
 **Decide** yourself, without asking or stopping, when all of these are true: the choice can be undone with a git revert; you would recommend one option; none of the hard stops below applies. An unclear spec, a spec that conflicts with the code, a theming hook that has to change (its docs change in the same commit), or a choice between ways to build it is decided this way. If two options seem equal, pick the smaller one that is easier to undo. Then:
 - comment on the issue, written to a file and posted with `gh issue comment N --body-file ...`: `Decided: <what>. Why: <one line>. To change it, reply on this issue.` One comment per decision; on a resume, don't post one that is already there;
@@ -44,14 +44,14 @@ For a hard stop: handle it as **Blocked** (one plain-language question in the is
 
 ## Size and path
 
-Sizes are defined in CLAUDE.md ("Sizes"). Read the issue's size label at step 3; an issue with no size label gets one there by those definitions (one line on the issue, as for an upgrade). The size decides the path:
+Sizes are defined in the handbook's `enamelware:operations` skill ("Sizes"); /draft labels every issue with one, taking the bigger one when unsure. Read the issue's size label at step 3; an issue with no size label gets one there by those definitions (one line on the issue, as for an upgrade). The size decides the path:
 
 | Size | Builder | Checks (step 8) | Test runs |
 |---|---|---|---|
 | S, M | builds it and writes the tests it needs | `reviewer` only (it also checks the tests) | quick |
 | L | builds it and writes the tests it needs | `test-checker`, then `reviewer` | quick, and `scripts/test.sh full` before merging |
 
-Every size keeps its own branch, merging only when the checks pass, the progress comment, the testing comment and the board moves.
+Every size keeps its own branch, merging only when the checks pass, the progress comment, the testing comment and the board moves. Each agent answers PASS, or FAIL with a numbered list; `.claude/hooks/agent_guard.py` enforces the checking agents' limits (and those of test-writer and refactor-scout, see `docs/decisions.md`).
 
 **Upgrades, automatic.** While building (steps 5 to 7, and again before step 8), compare the change with the size. An S becomes M if it touches more than about 3 files (not counting the tests written for it and `docs/decisions.md`), or touches the data folder (anything the app saves there, or how it finds it), `launch.sh`, privacy, licences (`LICENSE`, `THIRD_PARTY_LICENSES.md`, `vendor/`), the format of `settings.json`, or design system tokens (`ui/css/tokens.css`, or any token value the app sets). An M becomes L if it grows past one screen or feature. Then: `scripts/board.sh label N remove size:S` and `scripts/board.sh label N add size:M` (or M to L), one comment on the issue `Size: S → M. Why: <one line>.` (once; not again on a resume), update the progress comment's `Size:` line, and follow the new size's path from here. Sizes only go up during a build. Note every upgrade for the report.
 
@@ -77,7 +77,7 @@ Issues that /draft split from one feature share a label `series: <name>` and lin
   - Base: the parent of the series' first `Refs #` commit on `main` (`git log origin/main --reverse --format=%H --grep="^Refs #A:"` for each issue in the series; take the earliest, then `git rev-parse <commit>^`).
   - Run the `reviewer` agent with: `Series review: "<name>", issues #A, #B, #C. Check the combined change on main against <base>.`
   - **PASS:** move every card in the series to Ready for testing, post on each issue one comment `Series review passed: <the verdict word for word>`, and update each progress comment (`Next: owner testing`).
-  - **FAIL:** file one small follow-up issue in the same series: title `<name>: fixes from the series review`, body with What / Watch for / Done when (the numbered problems, plus any "Tidy-ups left"), labels `size:S` (or bigger, by CLAUDE.md's sizes) and the series label, a line linking the series, then `scripts/board.sh add F` and `scripts/board.sh status F "Ready for dev"` (it goes straight there: it only fixes what the owner already asked for). Comment on every series issue `Series review found problems; fixes in #F. The cards move to Ready for testing once it passes.` Building #F is the next issue to take; when it merges it is the last of the series, so the series review runs again over everything from the same base.
+  - **FAIL:** file one small follow-up issue in the same series: title `<name>: fixes from the series review`, body with What / Watch for / Done when (the numbered problems, plus any "Tidy-ups left"), labels `size:S` (or bigger, by the handbook's sizes) and the series label, a line linking the series, then `scripts/board.sh add F` and `scripts/board.sh status F "Ready for dev"` (it goes straight there: it only fixes what the owner already asked for). Comment on every series issue `Series review found problems; fixes in #F. The cards move to Ready for testing once it passes.` Building #F is the next issue to take; when it merges it is the last of the series, so the series review runs again over everything from the same base.
   - **Still FAIL after two follow-ups:** handle the last follow-up as **Blocked** with the verdict word for word; the series' cards stay in Building.
   - Tidy-ups left from a passing series review go in the report, not into a new issue.
 - Note each series review and its result for the report.

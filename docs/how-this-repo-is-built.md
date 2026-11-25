@@ -2,7 +2,7 @@
 
 Kettle Video is built with [Claude Code](https://www.anthropic.com/claude-code), Anthropic's coding agent, working from a designer's specs and decisions. The designer decides what Kettle Video should be and how it should look and behave, writes that down as ideas and specs, and tries every finished change on the reference devices: a Steam Deck (SteamOS) and a Retroid Pocket Nova (Armada), in Gaming Mode, with a controller. Claude Code turns the specs into issues, builds them, tests them and records what it decided along the way. This page explains how that work moves, for a curious designer or developer reading the repo.
 
-The instructions Claude Code follows are part of the repo: [`CLAUDE.md`](../CLAUDE.md) holds the rules, and the [`.claude/`](../.claude) folder holds the commands and the helper agents described below.
+The instructions Claude Code follows are part of the repo: [`CLAUDE.md`](../CLAUDE.md) holds the rules specific to Kettle Video, the rules every Enamelware repo shares come from the Enamelware handbook (the public repository `enamelware/handbook` on GitHub), installed as a Claude Code plugin at project scope, and the [`.claude/`](../.claude) folder holds the commands and the helper agents described below.
 
 ## The planning board
 

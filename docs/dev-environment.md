@@ -98,6 +98,8 @@ git config --local user.email "335260252+enamelware@users.noreply.github.com"
 
 Board and progress-comment changes go through `scripts/board.sh` (run it without arguments for its usage), and finished `issue-N` branches are deleted with `scripts/branch-done.sh N`. These wrappers exist so each repeated operation is covered by one narrow permission rule; see `docs/decisions.md`, "Fewer approval prompts".
 
+**Permission rules** (`.claude/settings.json`). A new ask or deny rule must never catch a read-only command: check it against git log, show, status and diff; gh issue view and list; ls, cat and grep; `scripts/board.sh list`; and `scripts/peek.sh`, and narrow any existing ask rule that catches one (`tests/test_agent_guard.py` checks this). `git rm` runs without asking for files git tracks inside this repo, since a deletion is reversible like any edit; plain `rm`, `git rm` with a path outside the repo or with `-f`/`--force`, `git clean`, and anything that deletes untracked files still ask (see `docs/decisions.md`). The handbook plugin (`enamelware@enamelware`, from `enamelware/handbook`) is enabled in the same file, at project scope; it adds no permission rule.
+
 `tests/test_vendor.py` checks that guessit is loaded from `vendor/` (not a system install) and can parse a TV and a movie filename. The filename parser has its own tests in the unit suite.
 
 `tests/launch_cycles.py [cycles]` opens and quits the whole app several times in a row (default 10) on a temporary copy, with a headless Firefox and a throwaway profile and home folder, and checks that the page loads every time, Firefox closes cleanly and a second launch is blocked. It needs Firefox and is not part of the unit tests.

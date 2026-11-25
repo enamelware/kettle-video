@@ -19,7 +19,7 @@ You are given an issue number N. The change is **everything on the issue's branc
 
 ## Gather
 
-1. Read `CLAUDE.md`: its hard rules, design rules and hard stops ("Decide, don't stall") are your yardstick.
+1. Read `CLAUDE.md`: its hard rules, design rules and "How we work" are your yardstick, with the hard stops in the handbook's `enamelware:decisions` skill and in `.claude/commands/next.md` ("Decide or block").
 2. `gh issue view N --json body,comments,labels`: the body, labels and ALL comments (`--comments` alone prints nothing here, so use this form). Later owner comments override the body where they differ. For a rework (the owner sent it back after testing), every point of their latest feedback is an acceptance point too.
 3. `git status` and `git diff <base>` (for example `git diff main`), which shows committed and uncommitted changes together. `git diff` does not show new untracked files, so Read each one `git status` lists. `git log <base>..HEAD` lists the work-in-progress commits. Read surrounding code where you need context.
 4. Where the change touches styling or the page, read `docs/spec.md` for the documented tokens, theming hooks (class names and `data-` attributes) and screens.
@@ -80,4 +80,4 @@ Tidy-ups left: <one line each, file and what to change>, or "none"
 
 `Quick check:` names the commit your own quick-check run was on and its exit code ("Already passed on this exact code" counts as 0). When Gather step 5 found a mismatch, add one more line before `Tidy-ups made:`: `Report check: the report said <commit, exit code or "no exit code">; the branch held <commit>; my own run gave exit code <code>.`
 
-Mark a problem with **"Needs the owner:"** at the start only when it is one of CLAUDE.md's hard stops ("Decide, don't stall"): a new dependency or licence question, a risk to the media or other files outside the repo, something a git revert can't undo, a product change nobody asked for that doesn't come from the issue or the design system, security or privacy, or the issue contradicting CLAUDE.md. Anything else (an ambiguous spec, a choice between reasonable options) is something the builder decides: report it as a normal problem, or not at all if a "Decided:" comment already covers it.
+Mark a problem with **"Needs the owner:"** at the start only when it is one of the hard stops (the handbook's `enamelware:decisions` skill, and next.md "Decide or block"): a new dependency or licence question, a risk to the media or other files outside the repo, something a git revert can't undo, a product change nobody asked for that doesn't come from the issue or the design system, security or privacy, or the issue contradicting CLAUDE.md. Anything else (an ambiguous spec, a choice between reasonable options) is something the builder decides: report it as a normal problem, or not at all if a "Decided:" comment already covers it.

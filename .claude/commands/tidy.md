@@ -5,11 +5,11 @@ argument-hint: "[deep]"
 
 Idle work: small tests and docs improvements, then refactor proposals. Never changes what the app does. Argument: $ARGUMENTS
 
-Follow CLAUDE.md throughout, especially "How we work", "Testing" and "How to talk to me", and the shared rules in `.claude/commands/next.md` ("Safe to interrupt", "Progress comment", "Blocked", step 8 and step 9), which apply here as written unless this file says otherwise. Board changes only through `scripts/board.sh`; tests only through `scripts/test.sh`. One simple command at a time: no `&&`, `;` or pipes, no `cd`, no `export`. Run git from this repo's folder without `git -C`; read Enamel's repo only with `scripts/peek.sh`.
+Follow CLAUDE.md throughout, especially "Hard rules", "How we work" and "How to talk to me", the handbook plugin's skills (`enamelware:operations`, "Sizes", for idle work), and the shared rules in `.claude/commands/next.md` ("Safe to interrupt", "Progress comment", "Blocked", step 8 and step 9), which apply here as written unless this file says otherwise. Board changes only through `scripts/board.sh`; tests only through `scripts/test.sh`. One simple command at a time: no `&&`, `;` or pipes, no `cd`, no `export`. Run git from this repo's folder without `git -C`; read Enamel's repo only with `scripts/peek.sh`.
 
 **This repo only.** The Kettle board also holds issues from other repositories (Enamel). Read, build, move, label, comment on and create only issues that belong to this repository. `scripts/board.sh list` already leaves the others out, and `gh issue` commands without `--repo` stay in this repository; never pass `--repo` or follow a link to act on another repository's issue.
 
-**Never stop to ask the owner,** whether run on its own or from /next all. Choices are decided as in next.md ("Decide or block"); a hard stop or a check that still fails becomes a "Blocked" comment and label (next.md, "Blocked"); then go on with the next part.
+**Never stop to ask the owner,** whether run on its own or from /next all, and never use the interactive question prompt. Choices are decided as in next.md ("Decide or block"); a hard stop or a check that still fails becomes a "Blocked" comment and label (next.md, "Blocked"); then go on with the next part.
 
 ## 0. Before starting
 

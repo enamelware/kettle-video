@@ -56,7 +56,38 @@ Settings also accept an optional `mpv_args` list (default `[]`) of extra flags p
 
 ## Not built yet
 
-Thumbnails in the lists, metadata, theming snippets (the snippets folder, its loader and the setting to toggle them; the hooks they will use are listed in "Theming hooks" below) are not built yet. Installing, updating by running the installer again and uninstalling are built (the installer work, the installer's update step and the uninstaller work; see "Installing", "Updating" and "Uninstalling"; `install-shortcut.sh` stays for development copies). Filename parsing, the TV show > season > episode hierarchy, resume (mpv's own, the resume work; see the README), a first Continue watching row (the Continue watching work), onboarding (choosing the folders, the folder choice screens; the first scan and its result screen, the first scan screen) and a first Settings screen (Folders and About, the Settings screen work) are built. See `CLAUDE.md`'s Milestones section.
+Thumbnails in the lists, metadata, theming snippets (the snippets folder, its loader and the setting to toggle them; the hooks they will use are listed in "Theming hooks" below) are not built yet. Installing, updating by running the installer again and uninstalling are built (the installer work, the installer's update step and the uninstaller work; see "Installing", "Updating" and "Uninstalling"; `install-shortcut.sh` stays for development copies). Filename parsing, the TV show > season > episode hierarchy, resume (mpv's own, the resume work; see the README), a first Continue watching row (the Continue watching work), onboarding (choosing the folders, the folder choice screens; the first scan and its result screen, the first scan screen) and a first Settings screen (Folders and About, the Settings screen work) are built. See "Roadmap" below.
+
+## Roadmap
+
+Moved here from `CLAUDE.md` when the handbook plugin came in (the handbook work), so the instructions loaded in every session stay short. It describes the intended full design; what is built is listed in "Not built yet" above.
+
+**The first version (the walking skeleton, the MVP).** Testing started with pre-set folders on an SD card in each test device, so the first working version was deliberately minimal: scan the two configured folders (Movies, TV Shows) on launch, list the video files as plain text grouped by folder (no thumbnails, no parsed titles, no metadata), launch mpv on the chosen file and return to the list when it exits, with the folder paths set directly in the settings file. Everything after it (onboarding, parsing, the saved library, Continue watching, Settings) is described in the sections above.
+
+**Target design**, once the detail screens are built:
+
+- Home: the list of sources plus a "Continue watching" shelf.
+- Movies: a detail screen per movie.
+- TV: show > season > episode.
+- Onboarding in 3 steps: choose a location, pick or create the Movies and TV Shows folders, then a designed empty state.
+- Theming snippets: CSS files in a snippets folder, loaded after the defaults and toggled in Settings (taken off the backlog for now, see "Theming hooks").
+- A suggested layout, created as needed: `backend/` (scanner, parser, library store, mpv launcher, settings), `ui/` (page, styles, scripts), `themes/` (example snippets), `docs/`, `tests/` (parser fixtures).
+
+**Library cases the parser handles or will need to** (exact patterns are still an open question): one folder per movie (scene-style dotted names, or "Title (Year)"), multi-part movies (numbered files), cover images next to files, anime with absolute episode numbers and no season folders, unnumbered specials, "Sample" subfolders, and macOS `._` files (ignored).
+
+**Milestones:**
+
+1. Setup: repo scaffold, docs, the instructions file.
+2. Walking skeleton (the MVP above), tested on both reference devices.
+3. Library: scan, filename parsing, JSON storage (built).
+4. Controller UI: home, movie detail, TV hierarchy (a first version is built), focus navigation.
+5. Resume and sources: Continue watching, SD card unavailable states.
+6. Onboarding, settings, theming snippets.
+7. The v0.1 release on GitHub.
+
+Later, not now: Flatpak packaging, then a Decky companion built by a developer on the same backend, which is why the backend stays portable and documented.
+
+**Audience and distribution.** The audience is enthusiasts on Armada (SteamOS-like ARM handhelds) and SteamOS, comfortable with Desktop Mode. There is no terminal in Gaming Mode, so everything works without one. mpv is a required dependency, not bundled for now. The installer is a downloadable `.desktop` file plus a readable shell script that checks for mpv and offers to install it, applies Flatpak folder permissions if needed (none so far), places the files and prints the controller-layout steps (built: see "Installing", "Updating" and "Uninstalling"). The launcher writes a log file; the README asks users to attach it to GitHub issues and lists the tested versions. The controller mapping is documented in `docs/device-setup.md` and tested under different emulated controller types (Steam Deck, Xbox 360, DualSense). The name and brand are v0.1 and may change; the window title, the README and the Steam shortcut say "Kettle Video".
 
 ## Movie grouping (parser 4a, the movies parser work; used by the saved library since the saved library work)
 

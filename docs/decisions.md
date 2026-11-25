@@ -1247,3 +1247,14 @@ A minimal Settings screen, from Home's menu: change the Movies and TV Shows fold
 - **The model is chosen when `/tidy` starts the agent**, not in the agent's own file, which still names Opus: that is what `/tidy deep` asks for.
 
 **Reason:** to save allowance. Idle work ran on every `/next all` that cleared the board, whether or not anyone wanted it then.
+
+## 2026-11-25 — The Enamelware handbook plugin, and a short CLAUDE.md (the handbook work)
+
+**Decision:** the rules every Enamelware repository shares come from the Enamelware handbook ([enamelware/handbook](https://github.com/enamelware/handbook)), installed as the Claude Code plugin `enamelware@enamelware` at project scope, so it is recorded in the committed `.claude/settings.json` (`enabledPlugins` and `extraKnownMarketplaces`). Its five skills (decisions, product, design, development, operations) load only when a task needs them. `CLAUDE.md` now starts with a line saying so and keeps only what is specific to Kettle Video.
+
+- **The test for each line of `CLAUDE.md`:** would a session building any Kettle Video issue get something wrong without it? If not, the line moves or goes. A line the handbook says with the same meaning goes; where Kettle Video's rule is stricter, only the extra part stays. A rule only one command, agent or doc needs moves there: the /next mechanics to `.claude/commands/next.md` (most were already there), the agents' rules to `.claude/agents/`, the release steps to `docs/dev-environment.md` ("Release check", already there), the permission-rule rules to `docs/dev-environment.md` ("Permission rules"), and the MVP, target design, milestones and distribution plan to `docs/spec.md` ("Roadmap"). Rules typed in any session, such as the "#N failed" phrase, stay.
+- **Disagreements are left as they are**, listed on the issue for the designer: where `CLAUDE.md` and the handbook differ, the line in `CLAUDE.md` is unchanged.
+- **A development tool, not part of the app.** The plugin is not shipped with Kettle Video and is not in `vendor/`, so `THIRD_PARTY_LICENSES.md`, which lists what ships with the app, gets no line. Its text is CC BY 4.0; none of it is copied into this repository. It is downloaded from GitHub when it is installed, a development step, not the app going online. Adding it added no permission rule.
+- **Measuring the start of a session:** in the repo's folder, `claude -p "/context"` starts a fresh session and prints its context; the "Memory files" row for `CLAUDE.md`, the "Custom agents" rows and the project and plugin rows under "Skills" are what this repo loads at the start. The numbers before and after are on the handbook work's issue.
+
+**Reason:** `CLAUDE.md` is loaded at the start of every session, so every line in it costs tokens on every run, while commands, agents and skills load only when used. Enamel made the same move. One shared source for the shared rules also keeps the Enamelware repositories working the same way.

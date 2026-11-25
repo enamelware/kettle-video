@@ -18,7 +18,7 @@ You look for the refactors most worth doing in Kettle: changes to how the code i
 
 ## Gather
 
-1. Read `CLAUDE.md` (hard rules, architecture, design rules, theming hooks) and skim `docs/spec.md` and `docs/decisions.md`, so you don't propose undoing a recorded decision.
+1. Read `CLAUDE.md` (hard rules, library and architecture, design rules, theming hooks) and skim `docs/spec.md` and `docs/decisions.md`, so you don't propose undoing a recorded decision.
 2. The backlog: `gh issue list --state open --json number,title,labels,body --limit 200`. Note what is coming (Ready for dev and Drafted) and what is blocked.
 3. Existing refactor proposals: `gh issue list --state all --label refactor --json number,title,body,state --limit 200`.
 4. Read the code: `backend/`, `ui/`, `launch.sh`, `scripts/`, `tools/`, and the tests that cover each part. Never `vendor/`: it is third-party and never edited.
