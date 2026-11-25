@@ -45,9 +45,9 @@ A small guard (`.claude/hooks/agent_guard.py`) keeps each agent to the folders a
 
 | Size | What it is | Checks before merging |
 |---|---|---|
-| S | One small change, about three files or fewer, no new screen, nothing about data, launching, privacy or licences | the reviewer, and the quick check |
-| M | One feature or one screen | the reviewer, and the quick check |
-| L | Several screens, or a change across the app or the design system | test-checker, then the reviewer, the quick check and the full check |
+| S | One small change, about three files or fewer, no new screen or component, nothing about data, settings, design tokens, launching, the local server, privacy or licences | the reviewer, and the quick check |
+| M | One feature, one screen or one component | the reviewer, and the quick check |
+| L | Several screens, or a change across the app or the design system | test-checker, then the reviewer, the quick check, and the full check once, just before merging |
 
 The quick check runs the privacy guard on every file, the unit tests, and the browser checks for the screens the change touches: the real app in a headless Firefox, driven with the keys a controller sends, at window widths from the smallest the design system supports to very wide. The full check runs every unit test, timings included, and every browser check. It also runs before any release.
 

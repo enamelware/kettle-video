@@ -1258,3 +1258,14 @@ A minimal Settings screen, from Home's menu: change the Movies and TV Shows fold
 - **Measuring the start of a session:** in the repo's folder, `claude -p "/context"` starts a fresh session and prints its context; the "Memory files" row for `CLAUDE.md`, the "Custom agents" rows and the project and plugin rows under "Skills" are what this repo loads at the start. The numbers before and after are on the handbook work's issue.
 
 **Reason:** `CLAUDE.md` is loaded at the start of every session, so every line in it costs tokens on every run, while commands, agents and skills load only when used. Enamel made the same move. One shared source for the shared rules also keeps the Enamelware repositories working the same way.
+
+## 2026-11-25 — The commands and agents follow the handbook's sizes
+
+**Decision:** the size rules in `.claude/commands/` and `.claude/agents/` follow the handbook's `enamelware:operations` skill ("Sizes") exactly, and point to it rather than repeating it, except where an agent needs a rule in front of it to act.
+
+- **What an S counts** leaves out, besides the tests and `docs/decisions.md`, `CHANGELOG.md`, `VERSION` and regenerated files. A new screen, component or page, or a change to the local web server, makes an S an M, as the handbook says.
+- **Kettle Video's own triggers stay**, as the concrete form of the handbook's: the data folder (including how the app finds it), the format of `settings.json`, `ui/css/tokens.css` and any token value the app sets, `launch.sh`, `backend/server.py`, and the licence files and `vendor/`.
+- **The full check on an L runs once,** by the builder, in /next's merge step, after the checking agents pass. test-checker never runs it: the tests it adds change the code, so a run before them only had to be repeated, about half an hour each time. The agent guard still lets test-checker run it; the instructions are enough, so the guard is unchanged.
+- **A series that contains an L** also gets the full check in its series review, run on `main` by /next.
+
+**Reason:** one definition of the sizes keeps Kettle Video and Enamel working the same way, and the full check is the slowest step of a build.

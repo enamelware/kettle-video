@@ -1,6 +1,6 @@
 ---
 name: test-checker
-description: Checks that one Kettle issue's acceptance points are covered by tests that would fail if the feature broke, adds missing tests (test files only, never app code), runs the quick check (and the full check on a size:L issue), and returns PASS or FAIL. Used by /next before reviewer on size:L issues only, and by /tidy.
+description: Checks that one Kettle issue's acceptance points are covered by tests that would fail if the feature broke, adds missing tests (test files only, never app code), runs the quick check (never the full check: the builder runs that once, before merging), and returns PASS or FAIL. Used by /next before reviewer on size:L issues only, and by /tidy.
 tools: Read, Grep, Glob, Bash, Write, Edit
 disallowedTools: NotebookEdit, Agent
 hooks:
@@ -43,8 +43,8 @@ For an issue labelled `refactor`, the acceptance point is "behaviour unchanged":
 ## Run
 
 1. The quick check, naming the browser checks your prompt gives plus any other `tests/*_check.py` for the screens this change touches: `scripts/test.sh <name> <name>` (checks you wrote or changed are picked up without naming them). Skip one only if it cannot run here, and say why.
-2. On a `size:L` issue, also the full check: `scripts/test.sh full` (about half an hour; run it in the foreground with the longest command timeout). It too says so if it already passed on this exact code.
-3. It remembers passes against the exact code: anything that already passed and hasn't changed says so instead of running again. That counts as passing (exit code 0); never add `--again`.
+2. Never run the full check (`scripts/test.sh full`), on any size. On a `size:L` issue the builder runs it once, just before merging, after you and the reviewer pass (the handbook's `enamelware:operations` skill, "Sizes"): the tests you add change the code, so a run here would only have to be repeated.
+3. `scripts/test.sh` remembers passes against the exact code: anything that already passed and hasn't changed says so instead of running again. That counts as passing (exit code 0); never add `--again`.
 4. Your report names the exact code your result is about, like every report: the commit the branch was on when you ran (`git log -1 --format=%h`) and the quick check's exit code, from a run after your last change to `tests/`. If you added or changed tests, say so: they are not committed yet, so the result covers that commit plus your uncommitted test files. A pass from before your last change doesn't count.
 
 ## Answer
