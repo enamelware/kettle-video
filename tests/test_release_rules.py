@@ -48,8 +48,28 @@ UNKNOWN = "Zorb" + "lax Returns"
 INVENTED_LIST = "# invented\nExample Movie\nExample Show\n"
 
 
+# Every temporary repo's commits get the same date and none of this
+# machine's git settings, so a commit's name is the same on every run and
+# every machine. With the clock in it, a short commit name came out all
+# digits now and then (about one run in 40), which the check rightly doesn't
+# read as a commit address, so the commit-address tests failed at random.
+GIT_ENV = dict(os.environ, GIT_CONFIG_GLOBAL=os.devnull, GIT_CONFIG_NOSYSTEM="1",
+               GIT_AUTHOR_DATE="1700000000 +0000", GIT_COMMITTER_DATE="1700000000 +0000")
+
+
 def git(repo, *args):
-    return subprocess.run(["git", *args], cwd=repo, capture_output=True, text=True, check=True)
+    return subprocess.run(["git", *args], cwd=repo, capture_output=True, text=True, check=True,
+                          env=GIT_ENV)
+
+
+def commit_address(repo, length):
+    """HEAD's name cut to length, which the check must read as a commit
+    address: hex with at least one letter and one digit."""
+    name = git(repo, "rev-parse", "HEAD").stdout.strip()[:length]
+    assert any(c.isdigit() for c in name) and any(c.isalpha() for c in name), (
+        f"set-up: the fixed test commit's name {name} has no letter or no digit; "
+        "change the commit date in GIT_ENV")
+    return name
 
 
 class ReleaseCheckCase(unittest.TestCase):
@@ -328,19 +348,19 @@ class EmailsLinksAndCommits(ReleaseCheckCase):
                 self.assert_caught("CHANGELOG.md", text, "a link to this private repo's commits or issues")
 
     def test_a_commit_address_from_the_history(self):
-        commit = git(self.repo, "rev-parse", "--short=8", "HEAD").stdout.strip()
+        commit = commit_address(self.repo, 8)
         self.assert_caught("docs/x.md", f"Measured at {commit}.", "a commit address")
 
     def test_a_commit_address_looked_up_in_another_repo(self):
         # A copy without history: commits are looked up where they were made.
-        commit = git(self.repo, "rev-parse", "HEAD").stdout.strip()
+        commit = commit_address(self.repo, 9)
         copy = os.path.join(self.tmp, "copy")
         os.makedirs(copy)
         git(copy, "init", "-q", "-b", "main")
         git(copy, "config", "user.name", "Test")
         git(copy, "config", "user.email", "test@example.invalid")
         git(copy, "config", "commit.gpgsign", "false")
-        Path(copy, "notes.md").write_text(f"At {commit[:9]}.\n", encoding="utf-8")
+        Path(copy, "notes.md").write_text(f"At {commit}.\n", encoding="utf-8")
         git(copy, "add", ".")
         git(copy, "commit", "-q", "-m", "copy")
         run = lambda *extra: subprocess.run(
@@ -352,8 +372,8 @@ class EmailsLinksAndCommits(ReleaseCheckCase):
 
     def test_a_history_folder_that_is_not_a_repo_stops_the_check(self):
         # Never "clean" with commit addresses left unchecked.
-        commit = git(self.repo, "rev-parse", "HEAD").stdout.strip()
-        self.write("docs/x.md", f"At {commit[:9]}.\n")
+        commit = commit_address(self.repo, 9)
+        self.write("docs/x.md", f"At {commit}.\n")
         self.commit()
         plain = os.path.join(self.tmp, "not-a-repo")
         os.makedirs(plain)
