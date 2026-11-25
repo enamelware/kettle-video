@@ -1,0 +1,9 @@
+{
+  "movies_path": "",
+  "tv_path": "",
+  "mpv_command": "auto",
+  "mpv_args": [],
+  "resume": true,
+  "keep_awake": true,
+  "data_dir": "data"
+}

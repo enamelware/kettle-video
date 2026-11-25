@@ -1,0 +1,5 @@
+# The Enamel release Kettle Video has adopted: its git tag. The copy in
+# vendor/enamel/ must match this tag exactly, and the design system check
+# compares with this tag only, never with Enamel's main or its latest release.
+# Changed only by tools/update_enamel.py, in a "Bring in Enamel <version>" issue.
+v0.13.1

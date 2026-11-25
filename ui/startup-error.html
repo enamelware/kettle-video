@@ -1,0 +1,34 @@
+<!doctype html>
+<!--
+  SPDX-License-Identifier: GPL-3.0-or-later
+  Copyright (C) 2026 Mario Carabotta
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Kettle Video</title>
+  <!-- Start-up problem (the start-up problem screen): shown by launch.sh's small message
+       server (backend/startup_error.py) when the app itself couldn't
+       start. Built like the "mpv not found" screen: Enamel's tokens and
+       components, the app's full-message box, a primary button and the
+       hint bar. No other script than its own. -->
+  <link rel="stylesheet" href="vendor/enamel/tokens/enamel.css">
+  <link rel="stylesheet" href="vendor/enamel/components/enamel-components.css">
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/defaults.css">
+</head>
+<body>
+  <!-- The lines come from the message server; the first says Kettle
+       couldn't start, the last where the log is. -->
+  <main id="startup-error" class="full-message startup-error" role="alert">
+    <div data-role="lines"></div>
+    <button type="button" class="startup-error-close en-button en-button--primary" tabindex="-1" data-kind="close">Close</button>
+  </main>
+  <footer class="hint-bar en-hintbar">
+    <span class="hint en-hint"><span class="button-glyph en-glyph" aria-hidden="true">A</span> Close</span>
+    <span class="hint en-hint"><span class="button-glyph en-glyph" aria-hidden="true">B</span> Close</span>
+  </footer>
+  <script type="module" src="js/startup_error.js"></script>
+</body>
+</html>

@@ -1,0 +1,9 @@
+/settings.json
+kettle-video.desktop
+logs/
+data/
+/dist/
+__pycache__/
+*.pyc
+.claude/settings.local.json
+CLAUDE.local.md

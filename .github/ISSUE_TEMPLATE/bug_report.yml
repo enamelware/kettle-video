@@ -1,0 +1,88 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Mario Carabotta
+#
+# The bug report form on GitHub's New issue page (the bug report form work). Blank issues
+# stay allowed (config.yml), so issues made with a title and body directly,
+# as /draft does, never go through this form.
+# tests/test_bug_report_form.py checks it.
+
+name: "Bug report"
+description: "Something in Kettle Video doesn't work as it should."
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: "Thanks for taking the time to report this. Please leave out personal file and folder names."
+  - type: dropdown
+    id: device
+    attributes:
+      label: "Device"
+      description: "Which device were you using?"
+      options:
+        - "Steam Deck"
+        - "Retroid Pocket Nova"
+        - "Other (name it below)"
+    validations:
+      required: true
+  - type: input
+    id: other-device
+    attributes:
+      label: "Other device"
+      description: "If you chose Other, which device is it?"
+      placeholder: "The device's name"
+    validations:
+      required: false
+  - type: input
+    id: system
+    attributes:
+      label: "Operating system and its version"
+      description: "For example SteamOS 3.7.13, or Armada and its version."
+    validations:
+      required: true
+  - type: dropdown
+    id: mode
+    attributes:
+      label: "Desktop Mode or Gaming Mode"
+      options:
+        - "Gaming Mode"
+        - "Desktop Mode"
+        - "Both"
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: "Kettle Video version"
+      description: "Shown in Settings › About (open the menu, then Settings). If the app doesn't open, it's in the VERSION file in the app folder."
+      placeholder: "For example 1.0.0"
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: "What happened"
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: "What you expected"
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: "Steps to make it happen"
+      placeholder: "1. Open Kettle Video\n2. Choose ...\n3. ..."
+    validations:
+      required: true
+  - type: dropdown
+    id: every-time
+    attributes:
+      label: "Does it happen every time?"
+      options:
+        - "Every time"
+        - "Sometimes"
+        - "Only once so far"
+    validations:
+      required: true

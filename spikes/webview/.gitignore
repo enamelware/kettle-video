@@ -1,0 +1,3 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Throwaway virtual environments for the webview spike (the webview spike).
+.venv-*/

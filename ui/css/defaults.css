@@ -1,0 +1,715 @@
+/*
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * Copyright (C) 2026 Mario Carabotta
+ */
+
+/* Bundled with the app (ui/fonts), never loaded online. Wordmark only. */
+@font-face {
+  font-family: "Rubik Mono One";
+  src: url("../fonts/RubikMonoOne-Regular.ttf") format("truetype");
+  font-display: swap;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Home shell (the Home shell work): the pinned tab strip stays on screen, so a row
+   moved to is never scrolled under it or the hint bar. Since the Home polish the Menu
+   button above it scrolls with the page, so only the tabs need room.
+   Since the Enamel 0.6.0 upgrade (Enamel 0.6.0) the hint bar is Enamel's own height,
+   --en-c-hintbar-height, which Enamel's script keeps at the bar's real
+   height (on its parent, body); since the folder choice screens the app also keeps it at the
+   bar's real height at the root, where the scroll room is set. */
+html {
+  scroll-padding-top: var(--tab-strip-height);
+  scroll-padding-bottom: var(--en-c-hintbar-height);
+}
+
+/* Design system (the second design system step): the page and its frame take Enamel's
+   tokens: page colour, system font, body text, the side gutter. */
+body {
+  margin: 0;
+  background-color: var(--en-surface-page);
+  color: var(--en-text);
+  font-family: var(--en-font);
+  font-size: var(--en-text-body);
+  padding: 0 var(--en-space-gutter) calc(var(--en-c-hintbar-height) + var(--en-space-inset));
+}
+
+/* Headings (the third design system step): Enamel's heading size; season and group
+   headings in muted body text. */
+h2 {
+  font-size: var(--en-text-heading);
+  margin: 0 0 var(--en-space-inset) 0;
+}
+
+h3.group-heading {
+  font-size: var(--en-text-body);
+  color: var(--en-text-muted);
+  margin: var(--en-space-inset) 0 var(--en-space-gap) 0;
+}
+
+.source {
+  margin-bottom: var(--en-space-gutter);
+}
+
+.status {
+  color: var(--en-text-muted);
+  padding: var(--en-space-gap) 0;
+}
+
+/* Errors (the second design system step): Enamel has no message component, and no text
+   colour reaches 4.5:1 on its red. So an error is strong text on the raised
+   surface with a red bar at its start: the colour is never the only sign.
+   Since Enamel 0.11.0 (the Enamel 0.11.0 upgrade) the corners are a row's. The bar is a line, so
+   it should be px, but Enamel has no px token for a line: it stays on
+   --en-space-tight (rem) until Enamel has one (asked on the Enamel 0.11.0 upgrade). */
+.status[data-state="error"],
+.banner,
+.full-message {
+  background: var(--en-surface-raised);
+  color: var(--en-text-strong);
+  box-shadow: inset var(--en-space-tight) 0 0 var(--en-danger);
+  border-radius: var(--en-radius-face);
+}
+
+/* "folder not found": an error, like the other errors. */
+.status[data-state="error"] {
+  padding: var(--en-space-gap) var(--en-space-inset);
+}
+
+.file-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.file-row {
+  cursor: default;
+  outline: none;
+}
+
+/* Enamel list rows (the third design system step): every row of the Movies and TV Shows
+   lists, a show's episodes, the Rescan and Remove rows and the plain-list
+   fallback (.en-rows, .en-row, .en-row__meta). Enamel's rows have no
+   padding above and below; these get some, so a title with a second line
+   keeps room around it. A row moved to stays just clear of the bars. */
+.file-row.en-row {
+  padding-block: var(--en-space-gap);
+  scroll-margin: var(--en-space-tight);
+}
+
+/* Enamel lifts the focused row on keyboard focus only; the app moves
+   the focus itself, so the row lifts whenever it has the focus. Its muted
+   lines step up to soft text, its title to strong. */
+.file-row.en-row:focus {
+  outline: none;
+  background-color: var(--en-surface-control);
+  color: var(--en-text-strong);
+}
+
+.file-row.en-row:focus .row-label,
+.file-row.en-row:focus .row-year,
+.file-row.en-row:focus .row-subtitle,
+.file-row.en-row:focus .row-note,
+.file-row.en-row:focus .row-path {
+  color: var(--en-text-soft);
+}
+
+.banner {
+  padding: var(--en-space-inset);
+  margin-bottom: var(--en-space-inset);
+}
+
+/* "Playing…": not an error, so no red bar. */
+.banner-info {
+  color: var(--en-text);
+  box-shadow: none;
+}
+
+.full-message {
+  max-width: 40rem;
+  margin: var(--en-space-gutter) auto;
+  padding: var(--en-space-inset);
+  text-align: center;
+}
+
+/* Loading screen (the loading screen work): shown at launch until the library arrives.
+   Design system (the second design system step): only the colours around the wordmark come from
+   Enamel; the wordmark keeps its font, size and Mustard, and PLAYER its
+   wide letter spacing (Enamel has no brand tokens). */
+.loading-screen {
+  position: fixed;
+  inset: 0;
+  /* Above the focused row, which is raised to show its whole ring (the loading screen focus fix),
+     and above the shell's bars. */
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--en-space-inset);
+  padding: var(--en-space-gutter);
+  background-color: var(--en-surface-page);
+  color: var(--en-text-soft);
+  text-align: center;
+}
+
+.loading-screen[hidden] {
+  display: none;
+}
+
+.loading-screen p {
+  margin: 0;
+}
+
+.kettle-logo {
+  font-family: var(--font-wordmark);
+  font-size: var(--font-size-wordmark);
+  font-weight: normal;
+  line-height: 1;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--color-wordmark);
+}
+
+.loading-screen [data-role="label"] {
+  text-transform: uppercase;
+  letter-spacing: var(--letter-spacing-label);
+  /* Letter spacing also trails the last letter; this keeps the word centred. */
+  margin-right: calc(-1 * var(--letter-spacing-label));
+  margin-bottom: var(--en-space-inset);
+}
+
+/* Parsed library view (the parsed library view, interim): rows with a title, a muted
+   subtitle, and the original paths, shown only while d is on. */
+.parsed-row {
+  display: flex;
+  flex-direction: column;
+  /* Enamel's row centres its contents in a line; these rows stack their
+     lines, full width, centred top to bottom. */
+  align-items: stretch;
+  justify-content: center;
+  gap: var(--en-space-tight);
+}
+
+.row-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--en-space-tight) var(--en-space-gap);
+}
+
+/* The label's column grows with its own text, and never past its row (the Enamel 0.11.0 upgrade). */
+.row-label {
+  color: var(--en-text-muted);
+  font-variant-numeric: tabular-nums;
+  min-width: min(4.5em, 100%);
+}
+
+/* The row's meta style, as Enamel's .en-row__meta (the third design system step). */
+.row-subtitle,
+.row-note,
+.row-path {
+  color: var(--en-text-muted);
+  font-size: var(--en-text-small);
+}
+
+.row-note {
+  font-style: italic;
+}
+
+.row-path {
+  display: none;
+  overflow-wrap: anywhere;
+}
+
+body[data-show-paths] .row-path {
+  display: block;
+}
+
+.episode-view h2 {
+  margin-bottom: var(--en-space-tight);
+}
+
+.episode-view [data-role="show-subtitle"] {
+  margin: 0 0 var(--en-space-inset) 0;
+}
+
+/* Onboarding (the folder choice screens): screens built from Enamel 0.9.0's parts
+   (the step label, group bands, rows with a badge and a message in the
+   row). The rules below only lay them out with Enamel's tokens: the title
+   at Enamel's title size, the intro in soft text, room between groups, and
+   each folder row's lines stacked, as the library's rows are. Focus is
+   Enamel's own, on data-focused (set by the app). */
+.onboarding h1,
+.settings-title {
+  font-size: var(--en-text-title);
+  margin: var(--en-space-inset) 0 var(--en-space-tight) 0;
+}
+
+.onboarding-intro {
+  color: var(--en-text-soft);
+  margin: 0 0 var(--en-space-inset) 0;
+}
+
+.onboarding-groups .folder-list + .folder-band,
+.onboarding-groups .folder-list + .folder-list,
+.onboarding-groups .status + .folder-list {
+  margin-top: var(--en-space-inset);
+}
+
+/* "No videos found yet" (the No videos found screen): Enamel's numbered steps and primary
+   button, with room above the button. No step label on this screen. "Browse
+   somewhere else" (the Browse somewhere else work) is a second button, on a line of its own under
+   the first, as Up and Down move between them; each stays as wide as its words. */
+.onboarding .en-steplabel[hidden] {
+  display: none;
+}
+
+/* Every button of a screen's own: never wider than the page, with room from
+   the bars for the height it rises when focused (Enamel 0.11.0, the Enamel 0.11.0 upgrade). Look
+   again on the first launch's "mpv not found" (the mpv missing screen) is Enamel's primary
+   button, as wide as its words, with only these two lines (the onboarding tidy-up), and
+   so is Close on the start-up problem page (the start-up problem screen). */
+.mpv-look-again,
+.startup-error-close,
+.no-videos-action,
+.result-action {
+  max-width: 100%;
+  scroll-margin: var(--en-lift);
+}
+
+.no-videos-action,
+.result-action {
+  display: flex;
+  width: fit-content;
+  margin-top: var(--en-space-inset);
+}
+
+/* Screen 3 (the first scan screen): Enamel's progress, stat pair and notes, in that order,
+   with room between them. Its buttons sit like those above. Notes keep to a
+   box of their own with no gap, as Enamel asks. */
+.scan-progress,
+.result-notes {
+  margin-top: var(--en-space-inset);
+}
+
+/* Settings (issue 100): laid out as onboarding's screens are, from the same
+   rules: the title at Enamel's title size, rows stacked like folder rows, and
+   room around the About notes and the closing note. A licence's paragraphs are
+   plain body text; Enamel has no long-text view (needs enamel, issue 100). */
+.settings-heading {
+  margin-top: var(--en-space-gutter);
+}
+
+.settings-notes,
+.settings-list + .settings-end {
+  margin-block: var(--en-space-inset);
+}
+
+/* About's update rows and its credits are two lists, a row's gap apart
+   (issue 111). */
+.settings-list + .settings-list {
+  margin-top: var(--en-space-gap);
+}
+
+.folder-row,
+.settings-row {
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  gap: var(--en-space-tight);
+  padding-block: var(--en-space-gap);
+  scroll-margin: var(--en-space-tight);
+  cursor: default;
+}
+
+/* Missing films, shows and episodes (the quick rescan and Remove work): the title is dimmed, and
+   the muted "Missing" note always says it in words. On the focused row the
+   dimmed title steps up to soft text, like the row's other muted lines. */
+.parsed-row[data-status="missing"] .row-title {
+  color: var(--en-text-muted);
+}
+
+.file-row.en-row:focus[data-status="missing"] .row-title {
+  color: var(--en-text-soft);
+}
+
+/* Fresh start (the fresh start mode): the marker is Enamel's hint with no button
+   glyph, saying FRESH START. In the hint bar it comes first and keeps the
+   start of the bar, the hints keeping the end, so it sits in the bottom
+   corner and never covers one: like any hint it wraps onto its own line
+   when they don't all fit. The loading screen covers the hint bar, so it
+   has its own marker in the same corner. Never focusable. */
+.fresh-start[hidden] {
+  display: none;
+}
+
+.hint-bar .fresh-start {
+  margin-right: auto;
+}
+
+.loading-screen .fresh-start {
+  position: absolute;
+  left: var(--en-space-gutter);
+  bottom: var(--en-space-tight);
+}
+
+/* Home shell (the Home shell work): the Menu button at the top (the Home actions work), a strip of
+   two tabs pinned to the top of the window, and a black hint bar at the
+   bottom. Since the second design system step the tabs and the hint bar are Enamel's
+   (.en-tabs, .en-tab, .en-hintbar, .en-hint, .en-glyph). The rules below
+   only place them.
+   Since the Home polish (the designer's feedback) Home has no bar at the top: Enamel's
+   action bar is docked and black, so it is gone, and its Menu button sits
+   on the page, on the right, and scrolls away with it. It keeps the
+   action bar's layout (buttons on the right, wrapping, the tight space
+   above and below, which leaves room for the button's rise). */
+.action-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--en-space-gap);
+  margin-bottom: var(--en-space-inset);
+  padding: var(--en-space-tight) 0;
+}
+
+.action-bar[hidden],
+.continue-watching[hidden],
+.tab-strip[hidden] {
+  display: none;
+}
+
+.tab-strip {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  align-items: center;
+  /* Wider than Enamel's gap, so a focused tab's ring never runs under
+     its neighbour. Room for a ring, which should be px, but Enamel has no
+     px token for it: it stays on the gap token until Enamel has one (the Enamel 0.11.0 upgrade). */
+  gap: var(--en-space-gap);
+  /* One line of tabs; taller when they wrap onto another line (Enamel's
+     tabs wrap), and the app keeps --tab-strip-height at its real height. */
+  min-height: calc(var(--en-size-target) + 2 * var(--en-space-gap));
+  margin: 0 calc(-1 * var(--en-space-gutter)) var(--en-space-inset);
+  /* The tabs are centred, so the side padding only matters in a narrow
+     space. Since Enamel 0.8.0 (the Enamel 0.8.0 upgrade) it is the gap rather than the gutter,
+     so with 0.8.0's larger tab text the beta tab still fits on one line in
+     the smallest supported box, keeping "(BETA)" beside "SHOWS" (the TV beta label).
+     Side padding like this should be px, so larger text isn't squeezed by
+     it; Enamel has no px token for it yet (asked on the Enamel 0.11.0 upgrade). */
+  padding: var(--en-space-gap);
+  background-color: var(--en-surface-page);
+}
+
+.tab {
+  cursor: default;
+}
+
+.tab-count {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Enamel rings a tab for keyboard use only, expecting L1 and R1 to
+   switch tabs. Here the D-pad moves the focus onto the tabs, so the ring
+   shows whenever a tab has the focus. Like Enamel's own focused tab
+   (0.11.0, the Enamel 0.11.0 upgrade), the ring is its only edge: no satin rim inside it. */
+.tab:focus {
+  outline: var(--en-focus-ring-width) solid var(--en-focus-ring);
+  outline-offset: var(--en-focus-ring-offset);
+  box-shadow: none;
+}
+
+/* Enamel's hint bar, pinned to the bottom at Enamel's own height
+   (since the Enamel 0.6.0 upgrade; it was the shell's bar height). */
+.hint-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 2;
+}
+
+.hint[hidden] {
+  display: none;
+}
+
+/* The tabs name each list, so its own heading is kept only for screen
+   readers and snippets. */
+#library .source > h2 {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.source[hidden] {
+  display: none;
+}
+
+/* Movies list (the Movies list work): the title wraps to two lines at most and ends
+   with "…"; the focused row shows it in full. The year and labels follow
+   in fog (snow on the focused row, like every row). */
+.parsed-row[data-kind="movie"] .row-title {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+
+.parsed-row[data-kind="movie"]:focus .row-title {
+  display: block;
+  -webkit-line-clamp: none;
+  line-clamp: none;
+}
+
+.row-year {
+  color: var(--en-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The letter strip: touch only, down the right edge between the tab strip
+   and the hint bar. Only letters that have films; the current one is bold
+   with a bar beside it, never colour alone.
+   Since the letter strip fix it is level with the tab strip and comes later in the page,
+   so it is drawn in front: with Continue watching showing, the tab strip sits
+   lower down the page and crosses this column until it docks. Only the
+   letters are drawn, with nothing behind them, and in a narrow window only
+   the empty end of the unselected TV Shows tab can reach them. When every
+   letter can't fit at a readable size the strip scrolls by touch, and the
+   app keeps the current letter in view; "safe" keeps the first letters
+   reachable then (plain centring would push them above the top). */
+.letter-strip {
+  position: fixed;
+  top: var(--tab-strip-height);
+  bottom: var(--en-c-hintbar-height);
+  right: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  justify-content: safe center;
+  align-items: center;
+  width: var(--letter-strip-width);
+  max-width: 100%;
+  overflow: hidden auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  font-size: var(--font-size-letter-strip);
+  line-height: 1;
+  color: var(--en-text-muted);
+  user-select: none;
+}
+
+.letter-strip[hidden] {
+  display: none;
+}
+
+.letter-strip-letter {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  /* Taller touch targets when there is room, never under 1.2em. */
+  flex: 0 1 2.4em;
+  min-height: 1.2em;
+  cursor: default;
+}
+
+.letter-strip-letter[aria-current="true"] {
+  color: var(--en-text-strong);
+  font-weight: bold;
+  box-shadow: inset calc(-1 * var(--en-focus-ring-width)) 0 0 var(--en-text-strong);
+}
+
+/* Room for the strip, so it never covers a row. */
+#library:has(.letter-strip:not([hidden])) {
+  padding-right: var(--letter-strip-width);
+}
+
+/* Continue watching (the Continue watching work): a row of 16:9 tiles above the tabs. The
+   first is large with its caption underneath, the others smaller with only
+   the name. The row scrolls sideways (a swipe by touch) and keeps the
+   focused tile in view.
+   Since the tile alignment work the tiles stand on one shared bottom edge, like Steam's
+   Recent games row: the row is a two-line grid (frames, then captions) and
+   each tile spans both lines through a subgrid, so every frame and progress
+   bar ends on the same line and every caption starts on the line below.
+   Since the third design system step the row, tiles, frames, progress bars and captions are
+   Enamel's (.en-shelf, .en-tile, .en-tile--large, .en-tile__frame,
+   .en-progress--thin, .en-tile__title); the rules below keep the tile alignment work's layout.
+   Since the responsive layout work the tile widths are Enamel's, from the row's own width
+   (the shelf is a size container), so how many tiles show follows from the
+   space the row gets. */
+.continue-watching {
+  margin-bottom: var(--en-space-gap);
+}
+
+.continue-heading {
+  font-size: var(--en-text-body);
+  margin: 0 0 var(--en-space-gap) 0;
+}
+
+.continue-row {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
+  grid-template-rows: auto auto;
+  justify-content: start;
+  align-items: normal;
+  /* The caption's own top padding (Enamel's) is the gap between lines. */
+  row-gap: 0;
+  /* Enamel's gap between tiles on a shelf (since 0.8.0, the Enamel 0.8.0 upgrade). */
+  column-gap: var(--en-c-shelf-gap);
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  /* Enamel's shelf pads the row with room for the focus ring, which the
+     sideways scroll would cut off; this margin keeps the tiles lined up
+     with the page. */
+  margin: calc(-1 * var(--en-c-shelf-room));
+}
+
+.continue-tile {
+  grid-row: span 2;
+  display: grid;
+  grid-template-rows: subgrid;
+  outline: none;
+  cursor: default;
+}
+
+/* Enamel draws a tile's accent ring with ::after over its frame and
+   track lines. Here the track is inside the frame and the frames stand on
+   one bottom edge, so the ring's box is the frame's: the first line, 16:9,
+   at its bottom. The app moves the focus itself, so the ring shows
+   whenever the tile has the focus. */
+.continue-tile::after {
+  grid-row: 1;
+  align-self: end;
+  aspect-ratio: 16 / 9;
+}
+
+.continue-tile:focus::after {
+  outline: var(--en-focus-ring-width) solid var(--en-focus-ring);
+  outline-offset: var(--en-focus-ring-offset);
+}
+
+/* The frame, cropped to fill; without one, Enamel's plain frame with
+   the name on it. */
+.continue-frame {
+  position: relative;
+  align-self: end;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+}
+
+.continue-picture {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.continue-surface-name {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--en-space-gap);
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.continue-tile[data-picture] .continue-surface-name {
+  display: none;
+}
+
+/* Enamel's thin progress bar along the bottom edge of the frame. */
+.continue-progress {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+
+/* A missing file (card out): the picture turns dark and grey, with the
+   Movies list's "Missing" in the top-left corner. */
+.continue-tile[data-status="missing"] .continue-picture {
+  filter: var(--continue-missing-filter);
+}
+
+.continue-missing {
+  position: absolute;
+  top: var(--en-space-gap);
+  left: var(--en-space-gap);
+  padding: var(--en-space-tight) var(--en-space-gap);
+  border-radius: var(--en-radius-face);
+  background: var(--en-surface-bar);
+  color: var(--en-text);
+}
+
+/* Enamel's tile title, on the caption line (the tile alignment work) rather than its own
+   third line. */
+.continue-caption {
+  grid-row: 2;
+  align-self: start;
+  overflow-wrap: anywhere;
+}
+
+.continue-tile:focus .continue-caption {
+  color: var(--en-text-strong);
+}
+
+/* Small tiles: the name on two lines at most. Without a frame the name is
+   already on the surface, so it isn't repeated underneath. */
+.continue-tile[data-size="small"] .continue-caption {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+}
+
+.continue-tile[data-size="small"]:not([data-picture]) .continue-caption {
+  display: none;
+}
+
+/* Room for the Movies list's letter strip down the right edge. */
+body:has(.source[data-source="movies"]:not([hidden]) .letter-strip:not([hidden])) .continue-watching {
+  padding-right: var(--letter-strip-width);
+}
+
+/* Short windows (the responsive layout work): where the window can't keep two lines of tabs
+   and the hint bar pinned with two rows between them, the tabs scroll with
+   the page instead, so a row moved to always has room on screen. Start
+   still opens the menu. Until the Home polish the docked action bar was part of this
+   sum (about 24.25rem since Enamel 0.8.0, the Enamel 0.8.0 upgrade); without it, its one-line
+   height (a button plus the tight space above and below, 4.25rem) comes off,
+   leaving about 20rem. A media query can't read a token, so this one sum is
+   written out in rem. Last in the file, so it wins over the rules it
+   changes (the letter strip's top among them). */
+@media (max-height: 20rem) {
+  html {
+    scroll-padding-top: 0;
+  }
+
+  .tab-strip {
+    position: static;
+  }
+
+  /* The letter strip runs from the top of the window, so its letters fit
+     that space rather than the space under the pinned tabs. */
+  .letter-strip {
+    top: 0;
+    font-size: var(--font-size-letter-strip-short);
+  }
+}

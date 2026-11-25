@@ -1,0 +1,175 @@
+<!doctype html>
+<!--
+  SPDX-License-Identifier: GPL-3.0-or-later
+  Copyright (C) 2026 Mario Carabotta
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Kettle Video</title>
+  <!-- Enamel, the design system (the first design system step, the Enamel rename): vendored, loaded before the app's own. -->
+  <link rel="stylesheet" href="vendor/enamel/tokens/enamel.css">
+  <link rel="stylesheet" href="vendor/enamel/components/enamel-components.css">
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/defaults.css">
+  <!-- Enamel's behaviour script (the picker confirm work): the picker and, since the Home actions work,
+       the toast. After the stylesheets, before the app. -->
+  <script src="vendor/enamel/components/enamel-components.js"></script>
+</head>
+<body>
+  <!-- Enamel's page speckle (0.11.0, the Enamel 0.11.0 upgrade): only here, on empty page
+       ground, never behind list text. -->
+  <div id="loading" class="loading-screen en-speckle" role="status">
+    <p class="kettle-logo">Kettle</p>
+    <p data-role="label">Player</p>
+    <p data-role="message">Warming up your library…</p>
+    <p data-role="slow" hidden>Still working…</p>
+    <!-- Fresh start (the fresh start mode): the marker, in this screen's corner. -->
+    <span class="fresh-start en-hint" data-role="fresh-start" hidden>Fresh start</span>
+  </div>
+  <!-- Home actions (the Home actions work): the Menu button, Enamel's, on the right at
+       the top of Home. Since the Home polish there is no bar behind it: it sits on the
+       page and scrolls away with it. Shown by the app on Home only. -->
+  <header id="action-bar" class="action-bar" hidden>
+    <button type="button" class="en-button" tabindex="-1" data-kind="menu">Menu</button>
+  </header>
+  <div id="mpv-missing" class="full-message" hidden></div>
+  <div id="error-banner" class="banner" hidden></div>
+  <div id="playing-status" class="banner banner-info" hidden>Playing…</div>
+
+  <!-- Onboarding (the folder choice screens): on first launch, choose the Movies folder,
+       then the TV Shows folder, from the folders found with videos. The
+       app writes the step, the title, the intro and the list each time a
+       screen shows: Enamel's step label, group bands, rows, badge and
+       message in a row (Enamel 0.9.0, the Enamel 0.9.0 upgrade). Then screen 3 (the first scan screen), the first
+       scan and what it found: Enamel's progress, stat pair and notes. Also
+       opened by the page address ending in #onboarding. -->
+  <main id="onboarding" class="onboarding" hidden>
+    <h1 class="onboarding-title"><span class="en-steplabel" data-role="step"></span> <span data-role="title"></span></h1>
+    <p class="onboarding-intro" data-role="intro"></p>
+    <p class="status" data-role="looking" role="status" hidden></p>
+    <div class="onboarding-groups" data-role="groups"></div>
+  </main>
+
+  <!-- Settings (issue 100), from Home's menu: Enamel's rows, their meta
+       line and notes. The app writes the rows each time it shows: Movies
+       and TV shows (A opens onboarding's folder screen for that kind), then
+       one row per credit in THIRD_PARTY_LICENSES.md (A shows its licence).
+       Under the version, Check for updates (issue 111), and What's new
+       once a newer version is found. -->
+  <main id="settings" class="settings" hidden>
+    <h1 class="settings-title">Settings</h1>
+    <p class="status" data-role="status" role="status" hidden></p>
+    <h2 class="settings-heading">Folders</h2>
+    <ul class="settings-list en-rows" data-role="folders"></ul>
+    <h2 class="settings-heading" data-role="about-heading">About</h2>
+    <div class="settings-notes" data-role="about"></div>
+    <ul class="settings-list en-rows" data-role="updates"></ul>
+    <ul class="settings-list en-rows" data-role="credits"></ul>
+    <p class="settings-end en-note" data-role="not-affiliated"></p>
+  </main>
+
+  <!-- A credit's licence (issue 100): its name, its licence in Enamel's
+       notes, then the text as plain paragraphs. Up and Down scroll it.
+       What's new (issue 111) shows the release notes the same way. -->
+  <main id="licence" class="licence-view" hidden>
+    <h1 class="settings-title" data-role="title"></h1>
+    <div class="settings-notes" data-role="notes"></div>
+    <div class="licence-text" data-role="text"></div>
+  </main>
+
+  <!-- Continue watching (the Continue watching work): what you're partway through, above the
+       tabs. Hidden when nothing qualifies, so it takes no space. Tiles are
+       added by the app: the first one large, with a caption. -->
+  <section id="continue-watching" class="continue-watching" hidden>
+    <h2 class="continue-heading">Continue watching</h2>
+    <div class="continue-row en-shelf" data-role="tiles"></div>
+  </section>
+  <nav id="tab-strip" class="tab-strip en-tabs" role="tablist" hidden>
+    <div class="tab en-tab" role="tab" tabindex="-1" data-tab="movies" aria-selected="true">Movies <span class="tab-count en-tab__count" data-role="count"></span></div>
+    <div class="tab en-tab" role="tab" tabindex="-1" data-tab="tv" aria-selected="false" aria-label="TV shows, beta">TV Shows&nbsp;(beta) <span class="tab-count en-tab__count" data-role="count"></span></div>
+  </nav>
+
+  <main id="library" hidden>
+    <section class="source" data-source="movies">
+      <h2>Movies</h2>
+      <div class="status" data-role="status"></div>
+      <div class="groups" data-role="groups"></div>
+      <!-- Movies list (the Movies list work): touch-only letters down the right edge.
+           Never focusable (the tabindex because it can scroll, which would
+           otherwise make it a tab stop); the controller jumps with Left and
+           Right. -->
+      <nav class="letter-strip" data-role="letters" tabindex="-1" aria-label="Jump to letter" hidden></nav>
+    </section>
+    <section class="source" data-source="tv">
+      <h2>TV Shows</h2>
+      <div class="status" data-role="status"></div>
+      <div class="groups" data-role="groups"></div>
+    </section>
+  </main>
+
+  <!-- Removing missing items (the quick rescan and Remove work): an Enamel picker confirm
+       (the picker confirm work). The question, Yes, remove, then Cancel, focused first. -->
+  <dialog id="confirm-remove" class="confirm en-dialog" tabindex="-1">
+    <div class="en-picker">
+      <p class="en-picker__title" data-role="question"></p>
+      <div class="en-picker__rows">
+        <button type="button" class="en-picker__row" tabindex="-1" value="remove" data-kind="confirm-remove"><span>Yes, remove</span><span class="en-picker__desc">Only Kettle's list changes. Your files are never touched.</span></button>
+        <button type="button" class="en-picker__row en-picker__cancel" tabindex="-1" value="cancel" data-kind="confirm-cancel" autofocus><span>Cancel</span></button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Update and restart, or Pull the latest version (issue 112), from
+       Settings: an Enamel picker confirm. The question, the action, then
+       Cancel, focused first. The app writes the question and the action. -->
+  <dialog id="confirm-update" class="confirm en-dialog" tabindex="-1">
+    <div class="en-picker">
+      <p class="en-picker__title" data-role="question"></p>
+      <div class="en-picker__rows">
+        <button type="button" class="en-picker__row" tabindex="-1" value="update" data-kind="confirm-update"><span data-role="action"></span></button>
+        <button type="button" class="en-picker__row en-picker__cancel" tabindex="-1" value="cancel" data-kind="confirm-cancel" autofocus><span>Cancel</span></button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Home's menu (the Home actions work): an Enamel picker, action-list use. The
+       app writes its rows each time it opens: Rescan library, Remove N
+       missing items (only when there are some), Quit, then Cancel. -->
+  <dialog id="home-menu" class="home-menu en-dialog" tabindex="-1">
+    <div class="en-picker">
+      <div class="en-picker__rows" data-role="rows"></div>
+    </div>
+  </dialog>
+
+  <!-- Scan progress and its result (the Home actions work): Enamel's toast, bottom
+       right above the hint bar. Never focusable, never blocks a tap. -->
+  <div id="scan-toast" class="scan-toast en-toast" role="status" aria-live="polite" aria-atomic="true" hidden>
+    <span class="en-toast__text" data-role="text"></span>
+  </div>
+
+  <!-- Interim parsed library view (the parsed library view): one show's episodes. -->
+  <main id="episodes" class="episode-view" hidden>
+    <h2 data-role="show-title"></h2>
+    <p class="row-subtitle" data-role="show-subtitle"></p>
+    <div class="groups" data-role="seasons"></div>
+  </main>
+
+  <!-- Home shell (the Home shell work): black hint bar, Enamel's (the second design system step). B says Back where it goes
+       back one level, Quit elsewhere. On a Continue watching tile (the Continue watching work):
+       A Resume and X Remove (X sends Backspace). -->
+  <footer id="hint-bar" class="hint-bar en-hintbar">
+    <!-- Fresh start (the fresh start mode): Enamel's hint with no button, at the
+         start of the bar on every screen. Shown by the app in fresh start. -->
+    <span class="fresh-start en-hint" data-role="fresh-start" hidden>Fresh start</span>
+    <span class="hint en-hint"><span class="button-glyph en-glyph" aria-hidden="true">A</span> <span data-role="select">Select</span></span>
+    <span class="hint en-hint" data-role="remove" hidden><span class="button-glyph en-glyph" aria-hidden="true">X</span> Remove</span>
+    <span class="hint en-hint"><span class="button-glyph en-glyph" aria-hidden="true">B</span> <span data-role="back">Quit</span></span>
+    <!-- Onboarding (the folder choice screens): Y Look again searches for the folders again. -->
+    <span class="hint en-hint" data-role="look-again" hidden><span class="button-glyph en-glyph" aria-hidden="true">Y</span> Look again</span>
+  </footer>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

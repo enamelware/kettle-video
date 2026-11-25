@@ -1,0 +1,8 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Mario Carabotta
+#
+# Blank issues stay allowed (the bug report form work): /draft and the other commands make
+# issues with a title and body directly, and the bug report form must never
+# get in their way. tests/test_bug_report_form.py checks this stays true.
+
+blank_issues_enabled: true

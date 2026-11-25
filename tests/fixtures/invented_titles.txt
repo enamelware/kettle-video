@@ -1,0 +1,184 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Mario Carabotta
+#
+# The only film and show titles the repo may use (the release check work). The release
+# check (tools/release_check.py) reads titles from video file names, and
+# from "title" fields in tests/, docs/ and spikes/, and fails on any title
+# not listed here. A title is allowed because it is known to be invented,
+# never because it isn't known to be real: there is no list of real titles
+# anywhere, since that list would itself be a leak.
+#
+# Adding a title: make one up (CLAUDE.md, "Hard rules"), never a real film
+# or show, not even a near copy. One per line; case, dots, dashes,
+# underscores and spacing don't matter.
+
+# Invented titles in test data.
+Alpha
+Alpha 1920x1080
+Alpha Example
+Another Example
+Another Example Film
+Another Loose Example
+Another Movie
+Apple Example
+B Example
+Banana Example
+Beta
+Brackenfold
+Café
+Café Example
+Café Invented
+Cherry Example
+Delta
+Delta Example
+Eighth Example
+Eighth Exampel
+Epsilon
+Ever Example
+Example
+Example Anime
+Example Film
+Example Inc
+Example Movie
+Example Movie 2
+Example Show
+Example-Movie
+Fernhollow
+Fifth Example
+Film
+Film 1
+Film 2
+Film 3
+Film 3 (2003) · Part 2
+Film One
+Film Two
+First Example
+Fourth Example
+Gamma
+Glimmerwick
+Gone Away Film
+Good Invented
+Invented Alpha
+Invented Beta
+Invented Delta
+Invented Film
+Invented Show
+Kiri Anime
+Loose Clip
+Loose Example
+Loose Film
+Loose Show
+Movie Without A Year
+New Example
+New Film
+Ninth Example
+Other Example
+Other Loose
+Other Movie
+Outside Example
+Plain Example
+Quillmoor
+Quillmoor Abbey
+Readable Example
+Second Example
+Seventh Example
+Show G
+Show H
+Show I
+Show J
+Show K
+Show Name
+Show Name 112
+Sixth Example
+Some Anime
+Some Show
+Test Show
+Test Show Behind the Scenes
+Third Example
+Two Part Example
+Zeta
+Zeta Example
+Élan Example
+例のショー
+Quillmoor 13
+Fernhollow 3
+Gl7mmer
+Se4lwick
+Brackenfold of
+S1lv0rwick
+Glimmerwick's 8
+Fernhollow Heist
+Dr Fernhollow and the Kettle
+Quillmoor 2051
+2003 Fernhollow Voyage
+1923 Brackenfold
+Fernhollow Voyage
+The Oakhollow
+
+# Plain words standing in for a file name in tests and docs.
+A B
+Bad-File
+Bad-Name
+Clip
+Eight
+Failed to Open Missing
+File
+Gone
+Here
+Hidden
+Intro
+Later
+Link
+Locked
+Lone
+Loose
+Loose-Video
+Many
+Missing
+Next
+One
+Other
+Outside
+Pilot
+Plain
+Poster
+Real
+S Version
+Sample
+Secret
+Secret-Episode
+Seven
+Short
+Show
+Show S01
+Sp3
+Special
+Split
+Three
+Title
+Top
+Top-Secret-Video
+Trailer
+Two
+Xe9
+Xe9 Invented
+Caf� Invented
+
+# Not film titles: the app's own screen and row names, and a spike's
+# window name, which tests and spikes read from "title" fields.
+Check for Updates
+Movies
+TV Shows
+Update and Restart
+Kettle (webview spike)
+
+# The sample library (docs/sample-library.md): Blender open movies under
+# Creative Commons licences, the one set of real films the repo may name
+# (CLAUDE.md, "Sample library"). Screenshots showing them carry the credit
+# line "(CC) Blender Foundation | studio.blender.org".
+Big Buck Bunny
+Elephants Dream
+Sintel
+Tears of Steel
+Tears of Steel Test Clip
+Caminandes

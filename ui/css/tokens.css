@@ -1,0 +1,46 @@
+/*
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * Copyright (C) 2026 Mario Carabotta
+ */
+
+/* Since the last design system step every colour, type size, spacing and radius comes from
+   Enamel's --en- tokens (vendor/enamel/, loaded before this file).
+   This file holds only what Enamel has no token for: the wordmark and the
+   app's layout sizes. The old palette and role tokens were removed in the last design system step,
+   and the old look kept for Scan my folders in the design system finish; docs/spec.md ("Tokens
+   removed in the last design system step", "Design system: Enamel 0.5.0 finished") lists
+   each one and what replaces it. */
+
+:root {
+  /* Wordmark: loading screen only. Enamel has no brand tokens, so the
+     wordmark keeps its own font, size and Mustard (the designer's choice, the Brand v0.1 work).
+     Sized by width so KETTLE stays on one line. */
+  --font-wordmark: "Rubik Mono One", system-ui, sans-serif;
+  --font-size-wordmark: clamp(2.5rem, 11vw, 6rem);
+  --letter-spacing-label: 0.3em;
+  --color-wordmark: #E4A83A;
+
+  /* Home shell (the Home shell work): the tab strip holds one row of pills (a tab is
+     at least the touch target tall), and since the responsive layout work the app keeps
+     --tab-strip-height at its real height when they wrap. Since the Enamel 0.6.0 upgrade the
+     hint bar at the bottom is Enamel's own height (--en-c-hintbar-height).
+     --shell-bar-height, the docked bar's height above the tabs, went in the Home polish
+     with the bar: the Menu button scrolls with the page. */
+  --tab-strip-height: calc(var(--en-size-target) + 2 * var(--en-space-gap));
+
+  /* Movies list (the Movies list work): the touch-only letter strip on the right. Its
+     letters shrink to fit 28 groups between the tab strip and hint bar, down
+     to seven tenths of Enamel's small text; below that they stay readable
+     and the strip scrolls instead (the letter strip fix). */
+  --letter-strip-width: 2.25rem;
+  --font-size-letter-strip: min(var(--en-text-small), max(calc(0.7 * var(--en-text-small)), calc((100vh - var(--en-c-hintbar-height) - var(--tab-strip-height)) / 34)));
+  /* In a short window (the responsive layout work, sizes since the Home actions work) the tabs scroll away and
+     the strip runs from the top of the window, so its letters fit that. */
+  --font-size-letter-strip-short: min(var(--en-text-small), max(calc(0.7 * var(--en-text-small)), calc((100vh - var(--en-c-hintbar-height)) / 34)));
+
+  /* Continue watching (the Continue watching work): since the responsive layout work the tiles take Enamel's
+     widths from the space their row gets, and the ring room is Enamel's
+     shelf room (--en-c-shelf-room). A missing file's frame turns dark and
+     grey. */
+  --continue-missing-filter: grayscale(1) brightness(0.45);
+}

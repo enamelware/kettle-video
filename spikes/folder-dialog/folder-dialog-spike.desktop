@@ -1,0 +1,10 @@
+[Desktop Entry]
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Mario Carabotta
+# Kettle spike (the folder dialog spike): open this file from the file manager to start
+# the folder dialog test page. %k is this file's own place, so no path to
+# the project is written here. Temporary: removed with the spike.
+Type=Application
+Name=Folder dialog spike
+Exec=sh -c 'exec bash "$(dirname "$1")/run-spike.sh"' sh %k
+Terminal=false

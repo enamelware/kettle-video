@@ -1,0 +1,132 @@
+<!doctype html>
+<!--
+SPDX-License-Identifier: GPL-3.0-or-later
+Copyright (C) 2026 Mario Carabotta
+
+Kettle spike (the folder dialog spike): the test page. Not part of the app, and not
+styled with Enamel on purpose: only big text and a clear focus, so it
+can be driven with the controller (Up, Down, A; B quits).
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Folder dialog spike</title>
+<style>
+  :root { color-scheme: dark; }
+  body { margin: 0; padding: 1rem; background: #111; color: #eee; font: 1.25rem/1.4 sans-serif; }
+  h1 { font-size: 1.5rem; margin: 0 0 0.5rem; }
+  button { display: block; width: 100%; max-width: 40rem; margin: 0.4rem 0; padding: 0.6rem 1rem;
+           font: inherit; text-align: left; background: #222; color: inherit; border: 2px solid #444; }
+  button:focus { outline: 4px solid #fff; outline-offset: 2px; }
+  button:disabled { opacity: 0.5; }
+  #results { margin-top: 1rem; max-width: 40rem; }
+  #results p { margin: 0.3rem 0; }
+</style>
+</head>
+<body>
+<h1>Folder dialog spike</h1>
+<p id="status">Checking which dialogs this device has…</p>
+<div id="buttons"></div>
+<div id="results" aria-live="polite"></div>
+<script>
+const buttonsEl = document.getElementById("buttons");
+const statusEl = document.getElementById("status");
+const resultsEl = document.getElementById("results");
+let busy = false;
+
+function buttons() {
+  return [...buttonsEl.querySelectorAll("button")];
+}
+
+function addButton(label, action, enabled = true) {
+  const b = document.createElement("button");
+  b.textContent = label;
+  b.disabled = !enabled;
+  b.addEventListener("click", action);
+  buttonsEl.append(b);
+}
+
+function say(text) {
+  const p = document.createElement("p");
+  p.textContent = text;
+  resultsEl.prepend(p);
+}
+
+const LABELS = { portal: "Desktop portal", kdialog: "KDE dialog (kdialog)", zenity: "GTK dialog (zenity)", tk: "Python's Tk dialog" };
+
+async function openDialog(name, button) {
+  if (busy) return;
+  busy = true;
+  let lostFocus = false;
+  let back = null;
+  const started = performance.now();
+  const onBlur = () => { lostFocus = true; };
+  const onFocus = () => { if (lostFocus && back === null) back = performance.now(); };
+  window.addEventListener("blur", onBlur);
+  window.addEventListener("focus", onFocus);
+  say(`${LABELS[name]}: open…`);
+  let record;
+  try {
+    record = await (await fetch(`/api/open/${name}`, { method: "POST" })).json();
+  } catch (err) {
+    record = { result: "error", detail: "the page lost the server" };
+  }
+  const ended = performance.now();
+  // Give the window a moment to come back to the front.
+  for (let i = 0; i < 30 && !document.hasFocus(); i++) await new Promise((r) => setTimeout(r, 100));
+  window.removeEventListener("blur", onBlur);
+  window.removeEventListener("focus", onFocus);
+  const focusBack = document.hasFocus();
+  const secondsToFocus = back === null ? null : Math.max(0, (back - ended) / 1000);
+  const where = record.where ? ` (${record.where})` : "";
+  say(`${LABELS[name]}: ${record.result}${where} after ${record.seconds ?? "?"} s. ` +
+      `Page lost focus while it was open: ${lostFocus ? "yes" : "no"}. ` +
+      `Page has focus again: ${focusBack ? "yes" : "no"}.`);
+  fetch("/api/note", { method: "POST", body: JSON.stringify({ dialog: name, lostFocus, focusBack, secondsToFocus }) });
+  busy = false;
+  button.focus();
+}
+
+async function quit() {
+  say("Quitting…");
+  try { await fetch("/api/quit", { method: "POST" }); } catch (err) { /* already gone */ }
+}
+
+document.addEventListener("keydown", (event) => {
+  const list = buttons().filter((b) => !b.disabled);
+  const at = list.indexOf(document.activeElement);
+  if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+    event.preventDefault();
+    const step = event.key === "ArrowDown" ? 1 : -1;
+    const next = list[Math.max(0, Math.min(list.length - 1, (at < 0 ? 0 : at + step)))];
+    if (next) next.focus();
+  } else if ((event.key === " " || event.key === "Enter") && at >= 0) {
+    event.preventDefault();
+    if (!event.repeat) list[at].click();
+  } else if ((event.key === "q" || event.key === "Escape") && !busy) {
+    event.preventDefault();
+    quit();
+  }
+});
+
+(async () => {
+  let checks = [];
+  try {
+    checks = await (await fetch("/api/checks")).json();
+  } catch (err) {
+    statusEl.textContent = "The spike's server doesn't answer.";
+    return;
+  }
+  for (const c of checks) {
+    addButton(c.available ? `Open: ${LABELS[c.name]}` : `${LABELS[c.name]}: not available`,
+              (event) => openDialog(c.name, event.currentTarget), c.available);
+  }
+  addButton("Quit the spike", quit);
+  statusEl.textContent = "Up and Down to move, A to open a dialog, B to quit.";
+  const first = buttons().find((b) => !b.disabled);
+  if (first) first.focus();
+})();
+</script>
+</body>
+</html>
