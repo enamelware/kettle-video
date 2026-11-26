@@ -7,6 +7,7 @@ Kettle Video is a simple, controller-first way to browse and play the movies and
 ## Requirements
 
 - A device running **SteamOS** or **Armada**, with Steam.
+  - Other Linux systems with Steam may work but aren't tested. If you try one, reports are welcome through the [bug report form](https://github.com/enamelware/kettle-video/issues/new?template=bug_report.yml).
 - **Firefox**, a system install or the Flatpak: Kettle Video shows its screens in Firefox, full screen.
 - **mpv — not bundled.** Kettle Video plays films in mpv and finds it by itself, a system install or the Flatpak. If mpv is missing, the app says so and shows how to install the Flatpak (`flatpak install flathub io.mpv.Mpv`, or the Bazaar app store); press `q` to close it. On the first launch the same screen has a **Look again** button, so once mpv is installed you can carry on without restarting the app.
 - Your films and shows in two folders, one for movies and one for TV shows, on the device or its SD card. Kettle Video only ever reads them.
