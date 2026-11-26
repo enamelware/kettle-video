@@ -37,7 +37,7 @@ Each issue is built and checked by separate agents, so the one that wrote a chan
 - **test-writer** adds missing tests and fixes out-of-date docs during idle work.
 - **refactor-scout** reads the code during idle work and proposes the most worthwhile refactors as issues. It changes nothing itself.
 
-A small guard (`.claude/hooks/agent_guard.py`) keeps each agent to the folders and commands its job needs.
+A small guard (`.claude/hooks/agent_guard.py`) keeps each agent to the folders and commands its job needs. The same guard also runs before every command in every session, and asks first before any push that names its target with a colon, which could update or delete another branch.
 
 ## Sizes and checks
 

@@ -1303,3 +1303,15 @@ A minimal Settings screen, from Home's menu: change the Movies and TV Shows fold
 - **The draft release is made without pushing the tag**, so nothing is public before the yes: GitHub creates the tag when the draft is published.
 
 **Reason:** a stranger arriving at the repo needs to know what the app does and how to install it before anything else, and a first release is published only with the designer's yes.
+
+## 2026-11-26 — Session settings: no missing plugin, and colon pushes asked about by the guard (the session settings work)
+
+**Decision:** the shared Claude Code settings (`.claude/settings.json`) no longer switch on the frontend-design plugin, and the ask rule for pushes that name a target with a colon is replaced by a check in the existing guard, `.claude/hooks/agent_guard.py`, run in a new `session` mode before every Bash command.
+
+- **The plugin** was switched on but not installed, so every session started with a warning. Nothing in the repository used it: Kettle Video's design work comes from Enamel and the handbook's design skill.
+- **The push rule**, `Bash(git push *:*)`, ended in a colon and a star, which Claude Code (2.1.326) reads as its older "starts with" form, with the earlier star taken literally. It warned at every start and, in practice, caught nothing: `git push origin issue-5:main` even went through without a question, because it fits the allowed issue-branch push. Claude Code warns about any rule with a colon followed by a star wherever it sits, and its rules have no other way to say "a colon followed by anything", so no rule can replace it without the warning.
+- **The guard's `session` mode** asks first for any `git push` with a colon in a word after `push` (a refspec such as `issue-5:main` or `:issue-5`, or a remote URL with one), including in chained commands, and asks when a line mentioning both can't be read. It never refuses and prints nothing for any other command, which then goes on to the permission rules as before.
+- **Nothing was loosened.** Compared on sample commands, before and after: every colon push now asks (before, two were allowed and the rest left to auto mode); the workflow's own pushes (`git push`, `git push -u origin issue-N`, `git push origin main`), force pushes, `--delete` pushes and read-only git, gh and board commands give the same answer as before. No other rule changed.
+- **Kept by tests** (`tests/test_agent_guard.py`): which pushes the check asks about and which go through, that it runs before every Bash command, that no rule contains a colon-star, and that only the handbook plugin is switched on.
+
+**Reason:** the designer chose a check over a rule (option 1 on the issue): it catches exactly the pushes the rule was meant to catch, and sessions start without a warning.

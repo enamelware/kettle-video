@@ -493,6 +493,99 @@ class SharedSettings(unittest.TestCase):
         self.assertIn("git -C *", self.rules("ask"))
 
 
+def session(command):
+    """What the session check does with a command: "ask", "through", or
+    "error" if it ever refuses or prints anything else."""
+    call = {"tool_name": "Bash", "tool_input": {"command": command}, "cwd": ROOT}
+    result = subprocess.run([sys.executable, GUARD, "session"], input=json.dumps(call),
+                            capture_output=True, text=True, timeout=10,
+                            env=dict(os.environ, CLAUDE_PROJECT_DIR=ROOT))
+    if result.returncode != 0:
+        return "error"
+    if not result.stdout.strip():
+        return "through"
+    out = json.loads(result.stdout)["hookSpecificOutput"]
+    return out["permissionDecision"] if out["hookEventName"] == "PreToolUse" else "error"
+
+
+class SessionPushCheck(unittest.TestCase):
+    """The session settings work: every session asks first before a push with
+    a colon in its target, and lets everything else go on to the rules."""
+
+    ASKS = [
+        "git push origin issue-5:main",
+        "git push origin issue-26:main",
+        "git push origin main:issue-5",
+        "git push origin :issue-5",
+        "git push origin :main",
+        "git push -u origin issue-5:main",
+        "git push --force-with-lease origin issue-5:main",
+        "git push origin refs/heads/issue-5:refs/heads/main",
+        "git push git@github.com:someone/elsewhere.git main",
+        'git push origin "issue-5:main"',
+        "git -c push.default=current push origin issue-5:main",
+        "/usr/bin/git push origin issue-5:main",
+        "git status && git push origin issue-5:main",
+        "git commit -q -m done; git push origin issue-5:main",
+        "git status\ngit push origin issue-5:main",
+        "git push origin issue-5:main 'unclosed",
+        "echo a#b; git push origin issue-5:main",
+        "git push origin issue-5:main # a note",
+    ]
+    THROUGH = [
+        # The workflow's own pushes (next.md and the release work).
+        "git push", "git push -q", "git push -u origin issue-26", "git push origin main",
+        "git push origin issue-26", "git push -q origin main",
+        # Not a push, even with a colon in it.
+        'git commit -q -m "WIP issue-26: code"', "git show HEAD:CLAUDE.md",
+        "git log --format=%h:%s", 'git commit -m "fix: one" && git push',
+        "gh issue comment 26 --body-file notes.md",
+    ]
+
+    def test_a_colon_push_is_asked_about(self):
+        for command in self.ASKS:
+            with self.subTest(command=command):
+                self.assertEqual(session(command), "ask")
+
+    def test_normal_pushes_and_other_commands_go_through(self):
+        for command in self.THROUGH + SharedSettings.READ_ONLY:
+            with self.subTest(command=command):
+                self.assertEqual(session(command), "through")
+
+    def test_other_tools_and_broken_input_go_through(self):
+        for call in ('{"tool_name": "Read", "tool_input": {"file_path": "a:b"}}', "not json", "[]"):
+            with self.subTest(call=call):
+                result = subprocess.run([sys.executable, GUARD, "session"], input=call,
+                                        capture_output=True, text=True, timeout=10)
+                self.assertEqual((result.returncode, result.stdout), (0, ""))
+
+
+class SessionSettings(unittest.TestCase):
+    """The shared settings start with no warning: the check above is wired to
+    every Bash command, no rule uses a colon-star (Claude Code warns about any
+    rule with one), and only plugins that exist are switched on."""
+
+    def settings(self):
+        with open(os.path.join(ROOT, ".claude", "settings.json"), encoding="utf-8") as f:
+            return json.load(f)
+
+    def test_the_session_check_runs_before_every_bash_command(self):
+        hooks = self.settings()["hooks"]["PreToolUse"]
+        commands = [h["command"] for entry in hooks if entry["matcher"] == "Bash"
+                    for h in entry["hooks"]]
+        self.assertIn('python3 "$CLAUDE_PROJECT_DIR/.claude/hooks/agent_guard.py" session', commands)
+
+    def test_no_rule_has_a_colon_star(self):
+        permissions = self.settings()["permissions"]
+        for kind in ("allow", "ask", "deny"):
+            for rule in permissions.get(kind, []):
+                with self.subTest(rule=f"{kind}: {rule}"):
+                    self.assertNotIn(":*", rule)
+
+    def test_only_the_handbook_plugin_is_switched_on(self):
+        self.assertEqual(self.settings()["enabledPlugins"], {"enamelware@enamelware": True})
+
+
 class AgentModels(unittest.TestCase):
     """test-writer runs on Sonnet and refactor-scout on Opus, as asked."""
 

@@ -32,7 +32,14 @@ never allowed.
 What this can and can't enforce is in docs/decisions.md
 ("The checking agents' guard: what it can and can't enforce").
 
-Usage: agent_guard.py reviewer|test-checker|test-writer|refactor-scout
+  session         Every session and agent (.claude/settings.json): asks
+                  first before any `git push` with a colon in its target,
+                  such as `git push origin issue-5:main` or `:issue-5`,
+                  which a permission rule can't express without a warning
+                  (the session settings work). Never refuses: anything
+                  else goes on to the permission rules as usual.
+
+Usage: agent_guard.py reviewer|test-checker|test-writer|refactor-scout|session
 """
 
 import json
@@ -249,8 +256,68 @@ def check_write(role, path, project):
     refuse(f"{role}: may only write in {where}, not {path}")
 
 
+# Global git options that take the next word as their value.
+GIT_VALUE_FLAGS = {"-c", "-C", "--git-dir", "--work-tree", "--namespace", "--exec-path"}
+
+
+def colon_push(command):
+    """True when the command runs a `git push` with a colon in any word
+    after `push`: a refspec naming its target (`a:b`, `:b`) or a remote
+    URL with one. Every `git` in the line is looked at, so chained
+    commands are covered; a line that can't be read but mentions both
+    `push` and a colon counts too, so nothing slips through by quoting."""
+    try:
+        lexer = shlex.shlex(command, posix=True, punctuation_chars=True)
+        lexer.whitespace_split = True
+        lexer.commenters = ""  # a "#" inside a word must not hide the rest of the line
+        words = list(lexer)
+    except ValueError:
+        return "push" in command and ":" in command
+    for start, word in enumerate(words):
+        if os.path.basename(word) != "git":
+            continue
+        rest = iter(words[start + 1:])
+        for word in rest:
+            if word in GIT_VALUE_FLAGS:
+                next(rest, None)
+            elif not word.startswith("-"):
+                break
+        else:
+            continue
+        if word != "push":
+            continue
+        for arg in rest:
+            if set(arg) <= set(";&|()<>"):
+                break  # the end of this command
+            if ":" in arg:
+                return True
+    return False
+
+
+def session(call):
+    """Ask first for a push with a colon in its target; let all else through."""
+    if call.get("tool_name") != "Bash":
+        return
+    command = (call.get("tool_input") or {}).get("command", "")
+    if colon_push(command):
+        print(json.dumps({"hookSpecificOutput": {
+            "hookEventName": "PreToolUse",
+            "permissionDecision": "ask",
+            "permissionDecisionReason":
+                "This push names a target with a colon (such as issue-5:main or "
+                ":branch), which can update or delete another branch.",
+        }}))
+
+
 def main():
     role = sys.argv[1] if len(sys.argv) > 1 else ""
+    if role == "session":
+        try:
+            call = json.load(sys.stdin)
+        except ValueError:
+            return
+        session(call if isinstance(call, dict) else {})
+        return
     if role not in ROLES:
         refuse(f"agent_guard: unknown role {role!r}")
     call = json.load(sys.stdin)

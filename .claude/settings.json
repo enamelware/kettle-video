@@ -94,7 +94,6 @@
       "Bash(git push * --force*)",
       "Bash(git push * -f*)",
       "Bash(git push *+*)",
-      "Bash(git push *:*)",
       "Bash(git push *--delete*)",
       "Bash(git reset --hard*)",
       "Bash(git branch -D *)",
@@ -177,8 +176,20 @@
     "defaultMode": "auto",
     "disableBypassPermissionsMode": "disable"
   },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/agent_guard.py\" session"
+          }
+        ]
+      }
+    ]
+  },
   "enabledPlugins": {
-    "frontend-design@claude-plugins-official": true,
     "enamelware@enamelware": true
   },
   "extraKnownMarketplaces": {
