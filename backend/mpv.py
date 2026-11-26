@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Optional
 
 from backend import keep_awake as awake
+from backend import sleep_pause
 
 FLATPAK_APP_ID = "io.mpv.Mpv"
 INSTALL_HINT = (
@@ -223,7 +224,8 @@ def build_command(
     With a capture_dir (and resume on), the Continue watching script saves
     the position and frame there when B quits (the Continue watching work).
     With a control_socket, mpv listens there, so the app can ask it to quit
-    when the app closes (the server shutdown check).
+    when the app closes (the server shutdown check), and play() can pause
+    it for sleep (the sleep pause fix, backend/sleep_pause.py).
     The playback controls (the playback controls work) are always given: Kettle's key file,
     its wording script, mpv's bar off, and the on-screen text style. With a
     title (Kettle's, from the saved library), D-pad Up shows it instead of
@@ -337,10 +339,16 @@ def play(
 
     log = _PlaybackLog(log_path, header)
     stop_diagnostics = awake.start_lock_diagnostics(log.write)  # Step 0, temporary
+    # Paused for sleep and kept at its spot on waking (the sleep pause fix).
+    sleep_watch = None
+    if control_socket is not None:
+        sleep_watch = sleep_pause.SleepPause(control_socket, log.write).start()
     try:
         with result:
             _copy_output_to_log(result.stdout, log)
     finally:
+        if sleep_watch is not None:
+            sleep_watch.stop()
         stop_diagnostics.set()  # Step 0, temporary
         log.close()
 

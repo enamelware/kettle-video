@@ -73,6 +73,7 @@ LOCAL_ONLY = {
     "backend/server.py": {"import http.server"},
     "backend/startup_error.py": {"import http.server"},
     "backend/mpv.py": {"import socket"},  # mpv's control socket, a file in /tmp
+    "backend/sleep_pause.py": {"import socket"},  # the same control socket, to pause for sleep
     "installer/update.py": {"import urllib.request", "import socket"},
 }
 

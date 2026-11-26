@@ -43,7 +43,7 @@ With `"resume": false` there is no Continue watching row. Closing the player in 
 
 ## Watching movies
 
-While a film is open, Kettle asks the system to keep the device awake: the screen shouldn't dim or turn off by itself. It uses the system's own "stay awake" lock (`systemd-inhibit`), labelled **Kettle / Playing a video**, which asks only for "don't go idle". It never stops a sleep you ask for: the power button always puts the device to sleep, and on waking the film is at the same point. The lock is tied to the player: it ends when you quit, when the player crashes, or when the app is closed. mpv's own "stop the screensaver" option stays on as well.
+While a film is open, Kettle asks the system to keep the device awake: the screen shouldn't dim or turn off by itself. It uses the system's own "stay awake" lock (`systemd-inhibit`), labelled **Kettle / Playing a video**, which asks only for "don't go idle". It never stops a sleep you ask for: the power button always puts the device to sleep. Kettle pauses the film just before, so on waking it is paused at the same point; press A to play on. The lock is tied to the player: it ends when you quit, when the player crashes, or when the app is closed. mpv's own "stop the screensaver" option stays on as well.
 
 In Gaming Mode, Steam runs its own dim and screen-off timers, which don't look at that lock. So while a film plays, Kettle's screen also asks the browser to keep the screen on (the standard "Screen Wake Lock"). Steam has delayed its timers for that kind of request since its 13 October 2026 update. The request ends when the film closes, however it closes. Each change is noted in the launch log (`screen wake lock: held`, `released`, and so on).
 
