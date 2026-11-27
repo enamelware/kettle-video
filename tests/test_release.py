@@ -129,7 +129,7 @@ class ReleaseTestCase(unittest.TestCase):
         return subprocess.run(
             [sys.executable, str(SCRIPT), tag, "--repo", self.repo, "--out", self.out,
              "--list", list_path or self.list],
-            capture_output=True, text=True, timeout=60)
+            stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=60)
 
     def written(self):
         return sorted(os.listdir(self.out)) if os.path.isdir(self.out) else []

@@ -1371,3 +1371,16 @@ A minimal Settings screen, from Home's menu: change the Movies and TV Shows fold
 
 **Nova risk:** the warning, the double-click and the dialog tool are the desktop's own; if Armada's file manager doesn't run desktop launchers on a double-click, this needs another format.
 
+
+## 2026-11-27 — Releases go up as pre-releases; the designer marks the latest (the release flow work)
+
+**Decision (the designer's):** releases become a deliberate, checked step. Installed copies only ever see the GitHub release marked as the latest; `main` is for development copies.
+
+- **The release script asks, then makes only a pre-release.** After building and checking the files, `tools/release.py` shows a summary and asks; only the answer `yes` uploads. A yes creates the GitHub release as a pre-release (never the latest), with the archive, its `.sha256`, `install.sh` and the one-file installer attached and the notes as its text. A no, an empty answer or a run with no one at a terminal uploads nothing.
+- **No token anywhere.** The script uses the GitHub CLI only when it is installed and already signed in by the person running it; it never asks for, reads or stores a token. Otherwise it prints the steps for GitHub's website. The GitHub CLI is optional.
+- **No switch for pre-releases.** No setting, switch or environment variable in any build lets the app or the one-file installer see pre-releases. The update is tested by hand by running the pre-release's `install.sh` over the previous public release on each test device, plus one clean install; "Update and restart" is covered by an automated test (a release that starts as a pre-release and is then marked as the latest), and used once by hand right after marking the release as the latest. If that fails, the release is unmarked as the latest straight away and a bug filed.
+- **Marking a release as the latest is always the designer's own step on GitHub**, after the checklist in `docs/RELEASING.md`.
+
+**Builder's choices** (decided, within the designer's rule): the answer must be the word `yes` (a `y` uploads nothing), so a reflex keypress can't publish; the upload passes `--latest=false` as well as `--prerelease`, and `--verify-tag`, so `gh` never makes a tag of its own from `main`; and Check for updates also refuses an answer marked pre-release or draft, as the one-file installer already does, although GitHub's "latest" never gives one.
+
+**Reason:** users get only what was tested on the devices, a release can only go public with the designer's explicit yes, and nothing about publishing is stored in the repo or on the devices.

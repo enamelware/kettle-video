@@ -47,9 +47,18 @@ anything, or the privacy guard's list is missing, nothing is written. The
 whole repo gets the same check as a release step of its own
 (docs/dev-environment.md, "Release check").
 
-Standard library only. Until the repo is public the installer takes its
-archive from this script's output; after that, the same files go on the
-GitHub release.
+Then (the release flow work, docs/RELEASING.md) it shows a summary of the
+release and asks before uploading. Only the answer "yes" uploads; any other
+answer, no answer, or a run with no one at the terminal uploads nothing.
+On a yes it creates the GitHub release, always as a pre-release and never
+as the latest, with the archive, its checksum, install.sh and the one-file
+installer attached and the notes as its text. It uses the GitHub CLI (gh)
+only when it is installed and already signed in by the person running the
+script; it never asks for, reads or stores a token. Without a signed-in gh
+it uploads nothing and prints the steps to do it on GitHub's website.
+Marking a release as the latest is always a step on GitHub, by hand.
+
+Standard library only; the GitHub CLI is optional, never required.
 """
 
 from __future__ import annotations
@@ -60,6 +69,7 @@ import gzip
 import hashlib
 import io
 import re
+import shutil
 import subprocess
 import sys
 import tarfile
@@ -72,6 +82,8 @@ import privacy_guard  # noqa: E402
 import release_check  # noqa: E402
 # names.env is read the one way the app reads it (the installer review fixes).
 from backend.app_paths import read_names  # noqa: E402
+# The one place the app names its GitHub repo.
+from backend.update_check import REPO as GITHUB_REPO  # noqa: E402
 
 NAMES_FILE = "installer/names.env"
 # Every name names.env must give; a release without one of them is never
@@ -405,10 +417,160 @@ def release(tag, out=None, repo=ROOT, list_path=privacy_guard.DEFAULT_LIST):
     return archive_path, sum_path, notes_path, installer_path, launcher_path
 
 
-def main(argv=None):
+# ---------------------------------------------------------------- publishing
+# The release flow work: a summary, one question, and only on "yes" a
+# GitHub pre-release. Never the latest: that is the designer's own step.
+
+YES = "yes"
+QUESTION = "Upload it to GitHub as a pre-release? Type yes to upload, anything else stops: "
+# How long gh may take to say whether it is signed in, and to upload.
+GH_CHECK_TIMEOUT_S = 30
+GH_UPLOAD_TIMEOUT_S = 30 * 60
+# What publish() ends with.
+UPLOADED, DECLINED, NO_ONE_TO_ASK, WEBSITE_STEPS, UPLOAD_FAILED = (
+    "uploaded", "declined", "no one to ask", "website steps", "upload failed")
+
+
+def upload_files(written):
+    """The files attached to the GitHub release: the archive, its checksum,
+    install.sh and the one-file installer. The notes become its text."""
+    archive, checksum, _notes, installer, launcher = written
+    return [Path(archive), Path(checksum), Path(installer), Path(launcher)]
+
+
+def _size(path):
+    size = Path(path).stat().st_size
+    if size >= 1024 * 1024:
+        return f"{size / (1024 * 1024):.1f} MB"
+    if size >= 1024:
+        return f"{round(size / 1024)} KB"
+    return f"{size} bytes"
+
+
+def summary(tag, version, app_name, written):
+    """What the upload would publish, in plain words."""
+    notes = Path(written[2]).read_text(encoding="utf-8")
+    lines = [
+        "",
+        f"Ready to upload {app_name} {version} (tag {tag}) to github.com/{GITHUB_REPO}.",
+        "It goes up as a pre-release, never as the latest release.",
+        "",
+        "Files attached:",
+        *(f"  {path.name} ({_size(path)})" for path in upload_files(written)),
+        "",
+        f"Release text (from {Path(written[2]).name}):",
+        *(f"  {line}" if line else "" for line in notes.splitlines()),
+        "",
+        "Anyone can see a pre-release on the Releases page, but Check for updates",
+        "and the one-file installer only ever take the latest release, so no one",
+        "is offered it. Marking it as the latest is done by hand on GitHub.",
+        "",
+    ]
+    return "\n".join(lines)
+
+
+def ask(question, read=input, interactive=None):
+    """The answer typed, "" for an end of input or Ctrl+C, or None when no
+    one is at a terminal to answer."""
+    if interactive is None:
+        try:
+            interactive = sys.stdin.isatty()
+        except (AttributeError, ValueError):
+            interactive = False
+    if not interactive:
+        return None
+    try:
+        return read(question)
+    except (EOFError, KeyboardInterrupt):
+        print()
+        return ""
+
+
+def said_yes(answer):
+    return isinstance(answer, str) and answer.strip().casefold() == YES
+
+
+def signed_in_gh(which=shutil.which, run=subprocess.run):
+    """(gh's path, None) when the GitHub CLI is installed and signed in to
+    GitHub, else (None, why). Only asks gh; never reads or stores a token."""
+    gh = which("gh")
+    if not gh:
+        return None, "the GitHub CLI (gh) isn't installed here"
+    try:
+        result = run([gh, "auth", "status", "--hostname", "github.com"],
+                     stdin=subprocess.DEVNULL, capture_output=True, timeout=GH_CHECK_TIMEOUT_S)
+    except (OSError, subprocess.TimeoutExpired):
+        return None, "the GitHub CLI (gh) didn't answer"
+    if result.returncode != 0:
+        return None, "the GitHub CLI (gh) isn't signed in to GitHub"
+    return gh, None
+
+
+def gh_command(gh, tag, version, app_name, written):
+    """The one gh command that makes the pre-release: the tag must already
+    be on GitHub (--verify-tag), and it is never marked as the latest."""
+    return [gh, "release", "create", tag, *(str(path) for path in upload_files(written)),
+            "--repo", GITHUB_REPO, "--verify-tag", "--prerelease", "--latest=false",
+            "--title", f"{app_name} {version}", "--notes-file", str(written[2])]
+
+
+def website_steps(tag, version, app_name, written):
+    """How to make the same pre-release on GitHub's website."""
+    folder = privacy_guard._shown(Path(written[0]).parent)
+    files = ", ".join(path.name for path in upload_files(written))
+    return "\n".join([
+        f"  1. Push the tag if it isn't on GitHub yet: git push origin {tag}",
+        f"  2. Open https://github.com/{GITHUB_REPO}/releases/new",
+        f"  3. Choose the tag {tag}.",
+        f"  4. Title: {app_name} {version}",
+        f"  5. Description: paste the whole text of {Path(written[2]).name}.",
+        f"  6. Attach these four files from {folder}: {files}.",
+        "  7. Tick \"Set as a pre-release\". Leave \"Set as the latest release\" unticked.",
+        "  8. Publish release.",
+    ])
+
+
+def publish(tag, version, app_name, written, read=input, interactive=None,
+            which=shutil.which, run=subprocess.run):
+    """Show the summary, ask, and only on "yes" make the pre-release.
+    Returns one of UPLOADED, DECLINED, NO_ONE_TO_ASK, WEBSITE_STEPS,
+    UPLOAD_FAILED."""
+    print(summary(tag, version, app_name, written))
+    answer = ask(QUESTION, read, interactive)
+    if answer is None:
+        print("No one is at a terminal to answer, so nothing was uploaded.")
+        return NO_ONE_TO_ASK
+    if not said_yes(answer):
+        print("Nothing was uploaded: the answer wasn't yes. The files stay in "
+              f"{privacy_guard._shown(Path(written[0]).parent)}.")
+        return DECLINED
+    gh, why = signed_in_gh(which, run)
+    if gh is None:
+        print(f"Nothing was uploaded: {why}. To make the pre-release on GitHub's website:")
+        print(website_steps(tag, version, app_name, written))
+        return WEBSITE_STEPS
+    print("Uploading with the GitHub CLI…")
+    try:
+        result = run(gh_command(gh, tag, version, app_name, written),
+                     stdin=subprocess.DEVNULL, timeout=GH_UPLOAD_TIMEOUT_S)
+        failed = result.returncode != 0
+    except (OSError, subprocess.TimeoutExpired):
+        failed = True
+    if failed:
+        print("The upload didn't finish. Look at the Releases page on GitHub: delete a "
+              "half-made release there if there is one, then run this again. Make sure "
+              f"the tag is on GitHub first (git push origin {tag}).")
+        return UPLOAD_FAILED
+    print(f"Uploaded {app_name} {version} as a pre-release. It is not the latest release: "
+          "test it with docs/RELEASING.md, then mark it as the latest on GitHub by hand.")
+    return UPLOADED
+
+
+def main(argv=None, read=input, interactive=None, which=shutil.which, run=subprocess.run):
     parser = argparse.ArgumentParser(
         prog="tools/release.py",
-        description="Build the release archive, its checksum and release notes from a tag.")
+        description="Build the release archive, its checksum, release notes and installers "
+                    "from a tag, then ask before uploading them as a GitHub pre-release.")
     parser.add_argument("tag")
     parser.add_argument("--out")
     parser.add_argument("--repo", default=str(ROOT))
@@ -423,7 +585,11 @@ def main(argv=None):
     print("Release check: the release is clean.")
     for path in written:
         print(f"Wrote {privacy_guard._shown(path)}")
-    return 0
+    # release() already checked the tag's names.env and that the tag is v<VERSION>.
+    names = read_names(_tag_file(args.repo, args.tag, NAMES_FILE))
+    outcome = publish(args.tag, args.tag[1:], names["APP_NAME"], written,
+                      read=read, interactive=interactive, which=which, run=run)
+    return 1 if outcome == UPLOAD_FAILED else 0
 
 
 if __name__ == "__main__":

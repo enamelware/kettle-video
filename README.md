@@ -122,7 +122,7 @@ Each run writes three logs in `~/.local/state/kettle-video/logs`: `launch-<times
 
 Kettle Video is free software under the GNU General Public License v3.0 or later (GPL-3.0-or-later); see [`LICENSE`](LICENSE). The third-party code it bundles, and mpv, which it uses but doesn't bundle, are listed with their licences in [`THIRD_PARTY_LICENSES.md`](THIRD_PARTY_LICENSES.md) and in Settings › About.
 
-Outside code contributions aren't being accepted for now, but bug reports and feedback are welcome. How the project is built: [How this repo is built](docs/how-this-repo-is-built.md); developing it: [`docs/dev-environment.md`](docs/dev-environment.md).
+Outside code contributions aren't being accepted for now, but bug reports and feedback are welcome. How the project is built: [How this repo is built](docs/how-this-repo-is-built.md); developing it: [`docs/dev-environment.md`](docs/dev-environment.md); making a release: [`docs/RELEASING.md`](docs/RELEASING.md).
 
 ## Screenshot credits
 

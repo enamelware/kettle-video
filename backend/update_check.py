@@ -8,7 +8,9 @@ timer or in the background. The server calls check() only when the viewer
 chooses "Check for updates", and it makes exactly one request:
 
 - a release install (and any copy that isn't a git checkout) asks GitHub's
-  release information for this app's repo for the latest release. The
+  release information for this app's repo for the latest release, and only
+  that: GitHub never answers it with a pre-release or a draft, and there is
+  no switch or setting to ask for one (the release flow work). The
   request carries nothing about the viewer, the device or the library: no
   cookies, no identifiers, only a plain user agent with the app's name and
   version. GitHub sees the device's IP address and that version.
@@ -157,6 +159,10 @@ def download_size(release: dict, archive_name: str, version: str) -> Optional[in
 
 
 def release_result(release: dict, current: str, archive_name: str) -> dict:
+    # GitHub's latest release is never a pre-release or a draft; an answer
+    # marked as either is never offered (the release flow work).
+    if release.get("prerelease") is True or release.get("draft") is True:
+        raise CheckFailed("an answer that isn't a full release")
     tag = release.get("tag_name")
     if not isinstance(tag, str) or parse_version(tag) is None:
         raise CheckFailed("an answer with no version")

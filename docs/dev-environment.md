@@ -134,7 +134,7 @@ The repo works on any Linux machine with Python 3.10 or later; the Steam Deck an
 
 ### Release archive
 
-`python3 tools/release.py v<VERSION>` (the release script work) builds a release from its tag into `dist/` (git ignores it), five files: the archive the installer installs, its `.sha256` checksum, release notes taken from the version's entry in `CHANGELOG.md`, `install.sh`, the tag's `installer/install.sh` with `installer/names.env`'s lines and `installer/update.py` written in, so it works on its own next to the archive (the installer work, the installer's update step), and `install-kettle-video.desktop`, the one-file installer: the tag's `installer/one_file_install.py` with the names written in, as a desktop launcher (the one-file install work, `docs/spec.md`, "Installing with one file"). Attach all of them except the notes to the GitHub release. It reads only the tag's tracked files, takes only the app and its licence files, and runs the release check (below, which includes the privacy guard) over everything it writes; a tag that doesn't match its `VERSION`, or a missing CHANGELOG entry, stops it with a plain message. Every installer name lives in `installer/names.env`, and a release whose `names.env` is missing one stops (the installer review fixes). Reasons: `docs/decisions.md`.
+`python3 tools/release.py v<VERSION>` (the release script work) builds a release from its tag into `dist/` (git ignores it), five files: the archive the installer installs, its `.sha256` checksum, release notes taken from the version's entry in `CHANGELOG.md`, `install.sh`, the tag's `installer/install.sh` with `installer/names.env`'s lines and `installer/update.py` written in, so it works on its own next to the archive (the installer work, the installer's update step), and `install-kettle-video.desktop`, the one-file installer: the tag's `installer/one_file_install.py` with the names written in, as a desktop launcher (the one-file install work, `docs/spec.md`, "Installing with one file"). Then it shows a summary and asks; only `yes` uploads the four files other than the notes as a GitHub pre-release (never the latest), with the notes as its text, through a GitHub CLI that is installed and already signed in, or else it prints the website steps (the release flow work; the whole checklist is `docs/RELEASING.md`). It reads only the tag's tracked files, takes only the app and its licence files, and runs the release check (below, which includes the privacy guard) over everything it writes; a tag that doesn't match its `VERSION`, or a missing CHANGELOG entry, stops it with a plain message. Every installer name lives in `installer/names.env`, and a release whose `names.env` is missing one stops (the installer review fixes). Reasons: `docs/decisions.md`.
 
 ### Commit identity
 
@@ -151,12 +151,12 @@ git config --local user.email "335260252+enamelware@users.noreply.github.com"
 
 `python3 tools/release_check.py` (the release check work) fails if the repo holds anything that mustn't go public, and lists each finding with its file, line and kind, never the text it found. It covers everything the privacy guard covers (same list, same rules), those private words also written in ROT13, backwards or encoded (base64, hex, % escapes, HTML entities, `\u` escapes), film and show titles not on the list of invented ones (`tests/fixtures/invented_titles.txt`), anything from Steam's client that Enamel's own clean-up rules out, the old names (through the rename checks in `tests/`), secrets and files that hold them, a tracked `.claude/settings.local.json` or `CLAUDE.local.md`, email addresses other than Enamelware's GitHub noreply address, and links to this private repo's commits or issues or a commit's address. Titles are read from video file names, and from `"title"` fields in tests, docs and spikes; a new invented title goes on the list. `--repo FOLDER` checks another folder (such as a clean copy), `--history REPO` looks commit addresses up in another repo's history, and `history` is the deep look at every version of every file and every commit message (a few minutes). Tests: `tests/test_release_rules.py`.
 
-**Release steps:**
+**Release steps:** (in full, with the device tests and marking the latest: `docs/RELEASING.md`)
 
 1. `scripts/test.sh full` passes.
 2. `python3 tools/release_check.py` finds nothing in the repo.
-3. Bump `VERSION`, add its `CHANGELOG.md` entry, tag `v<VERSION>`.
-4. `python3 tools/release.py v<VERSION>`, which runs the release check again on everything it writes.
+3. Bump `VERSION`, add its `CHANGELOG.md` entry, tag `v<VERSION>` and push the tag.
+4. `python3 tools/release.py v<VERSION>`, which runs the release check again on everything it writes, then asks before uploading it as a pre-release.
 
 ### Clean public copy
 
