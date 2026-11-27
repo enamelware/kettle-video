@@ -1348,3 +1348,11 @@ A minimal Settings screen, from Home's menu: change the Movies and TV Shows fold
 **Reason:** the issue asks for each copy to have its own data and for "delete your data" to leave a brand-new first launch, without touching a development copy or the media folders; keeping the installed copy's names and moving the development copy matches the menu entries, and keeping mpv's own folder for the development copy leaves it exactly as it was.
 
 **Nova risk:** the Flatpak mpv's folders inside `~/.var/app/io.mpv.Mpv` (its state folder for the carry-over, its data folder for the new positions) come from Flatpak's usual layout and were not looked at on a device; if the Nova's mpv kept its positions elsewhere, an update there starts without them.
+
+## 2026-11-27 — The launch rehearsal uses real releases, v1.0.0 and v1.0.1 (the launch rehearsal)
+
+**What changed:** the rehearsal was to use two rehearsal releases, v0.0.1 and v0.0.2, deleted afterwards. Since then v1.0.0 has been published as the latest release. A full release v0.0.2 would have taken over "latest" on GitHub, so anyone visiting during the rehearsal would have been offered a build not meant for use; as a draft or pre-release, Update and restart would not see it.
+
+**Decision (the designer's):** the rehearsal uses real releases. v1.0.1 holds the fixes for the power button during playback and for each copy keeping its own data; the update step goes from v1.0.0 to v1.0.1, and the other steps use v1.0.1. A problem the rehearsal finds is fixed in a later release such as v1.0.2. No rehearsal release is published, so nothing has to be deleted afterwards.
+
+**Reason:** the latest release on GitHub is always one meant for use, v1.0.0 needed its two fixes released anyway, and the update step tests the update a v1.0.0 user makes.

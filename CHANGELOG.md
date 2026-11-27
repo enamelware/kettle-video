@@ -8,6 +8,13 @@ and everything under it up to the next `## ` line.
 This file starts at 0.1.0-dev (the release script work). Earlier history is in
 `docs/decisions.md` and git's log.
 
+## 1.0.1
+
+Two fixes found while testing the whole path a new viewer takes.
+
+- The power button during a film: on waking, the film is paused where it was, instead of jumping back near the start.
+- Uninstalling with "delete your data" now removes everything Kettle Video keeps, so installing again starts fresh. Kettle Video keeps its own resume positions instead of sharing mpv's; positions you already have carry over the first time you play a film after the update.
+
 ## 1.0.0
 
 The first public release.

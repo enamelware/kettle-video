@@ -103,10 +103,14 @@ class PointersFromTheApp(unittest.TestCase):
 
 class Version(unittest.TestCase):
     def test_version_and_changelog(self):
-        self.assertEqual((ROOT / "VERSION").read_text(encoding="utf-8").strip(), "1.0.0")
+        # VERSION is 1.0.0 or later, and its entry is the newest in CHANGELOG.md.
+        version = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
+        self.assertRegex(version, r"^[1-9]\d*\.\d+\.\d+$")
         changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
-        self.assertRegex(changelog, r"\n## 1\.0\.0\n")
-        self.assertLess(changelog.index("\n## 1.0.0\n"), changelog.index("\n## 0.1.0-dev\n"))
+        entries = re.findall(r"^## (\S+)$", changelog, re.MULTILINE)
+        self.assertEqual(entries[0], version)
+        self.assertIn("1.0.0", entries)
+        self.assertLess(entries.index("1.0.0"), entries.index("0.1.0-dev"))
 
 
 if __name__ == "__main__":
