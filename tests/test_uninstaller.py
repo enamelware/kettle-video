@@ -371,15 +371,25 @@ class TheScriptItself(unittest.TestCase):
                           and "not as root or with sudo" not in line])
 
     def test_never_touches_steam_or_mpv(self):
-        for word in (".steam", "userdata", "shortcuts.vdf", "flatpak uninstall", "io.mpv"):
+        for word in (".steam", "userdata", "shortcuts.vdf", "flatpak uninstall"):
             self.assertNotIn(word, self.text)
+        # mpv's own folder only ever for the installed copy's resume positions
+        # inside it (the each-copy-its-own-data work), never mpv's own.
+        code = [line for line in self.text.splitlines() if not line.lstrip().startswith("#")]
+        self.assertEqual([line.strip() for line in code if "io.mpv" in line],
+                         ['mpv_resume_dir="$HOME/.var/app/io.mpv.Mpv/data/$APP_ID"'])
+        self.assertNotIn("watch_later", "\n".join(code))
 
     def test_runnable(self):
         self.assertTrue(os.access(UNINSTALLER, os.X_OK))
 
     def test_the_profile_name_matches_launch_sh(self):
+        # launch.sh asks backend/app_paths.py, and falls back on the same names.
         launch = (ROOT / "launch.sh").read_text(encoding="utf-8")
+        self.assertIn('PROFILE_NAME="$(python3 -m backend.app_paths profile 2>/dev/null)"', launch)
         self.assertIn(f'PROFILE_NAME="{NAME["FIREFOX_PROFILE"]}"\n', launch)
+        self.assertIn(f'PROFILE_NAME="{NAME["DEV_FIREFOX_PROFILE"]}"\n', launch)
+        self.assertIn(f'[ -f "$SCRIPT_DIR/{NAME["INSTALL_MARK"]}" ]', launch)
 
     def test_the_release_carries_it(self):
         import release

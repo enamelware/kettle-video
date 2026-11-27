@@ -289,17 +289,32 @@ elif flatpak info org.mozilla.firefox >/dev/null 2>&1; then
   log "found flatpak firefox"
 fi
 
-# The kiosk window's own Firefox profile, outside the app folder. Since the
-# rename to Kettle Video (the Kettle Video rename) it is a fresh kettle-video-profile:
-# this script writes its settings at every launch and the app keeps nothing
-# in the browser, so nothing is lost. The profile used before the rename is
-# never changed or deleted; the log only says it can be removed by hand.
+# The kiosk window's own Firefox profile, outside the app folder. Each copy
+# has its own (the each-copy-its-own-data work): kettle-video-profile for the
+# installed copy, kettle-video-dev-profile for a development copy, so neither
+# ever reads or changes the other's browser storage (backend/app_paths.py
+# says which, from installer/names.env). This script writes its settings at
+# every launch and the app keeps nothing in the browser, so a new profile
+# loses nothing. The profile used before the rename to Kettle Video (the
+# Kettle Video rename) is never changed or deleted; the log only says it can
+# be removed by hand.
 if [ "$FIREFOX_KIND" = "system" ]; then
   PROFILE_HOME="$HOME/.mozilla"
 else
   PROFILE_HOME="$HOME/.var/app/org.mozilla.firefox/data"
 fi
-PROFILE_NAME="kettle-video-profile"
+PROFILE_NAME="$(python3 -m backend.app_paths profile 2>/dev/null)"
+case "$PROFILE_NAME" in
+  ""|*/*|.|..)
+    # The same answer from the install mark, if Python couldn't give it.
+    if [ -f "$SCRIPT_DIR/kettle-video-installed" ]; then
+      PROFILE_NAME="kettle-video-profile"
+    else
+      PROFILE_NAME="kettle-video-dev-profile"
+    fi
+    ;;
+esac
+log "firefox profile: $PROFILE_NAME"
 OLD_PROFILE_NAME="media-player-profile"
 if [ -n "$FIREFOX_KIND" ] && [ -d "$PROFILE_HOME/$OLD_PROFILE_NAME" ]; then
   log "the old Firefox profile folder $OLD_PROFILE_NAME (in $PROFILE_HOME) is no longer used; it can be removed by hand"

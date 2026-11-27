@@ -90,14 +90,14 @@ In Desktop Mode, open a terminal (Konsole) and run:
 bash ~/.local/share/kettle-video/app/installer/uninstall.sh
 ```
 
-It lists what it will remove and asks first. It keeps your library, settings and logs unless you ask it to delete them, and never touches your films, mpv or Steam's files. Then remove Kettle Video from Steam by hand: right-click it in your Steam Library, **Manage**, **Remove non-Steam game from your library**.
+It lists what it will remove and asks first. It keeps your library, resume positions, settings and logs unless you ask it to delete them, and never touches your films, mpv itself or Steam's files. If you do delete them, installing Kettle Video again starts from scratch, as a first launch. A development copy (a git folder) keeps its own data, browser profile and resume positions, so uninstalling never touches it. Then remove Kettle Video from Steam by hand: right-click it in your Steam Library, **Manage**, **Remove non-Steam game from your library**.
 
 ## Privacy
 
 Kettle Video collects nothing and never goes online by itself. The only time it connects is when you choose **Check for updates** in Settings › About: it then asks GitHub for the latest version, which shows GitHub your IP address and the app's version, and, if you then choose **Update and restart**, downloads the new version from GitHub. It sends nothing about you or your library. Your library, settings and watch history stay on your device.
 
 - On a development copy (a git folder), the same two actions ask that copy's own git remote instead: **Check for updates** reads its latest version and **Pull the latest version** downloads it. git connects with its own settings, including any sign-in you have set up for that remote, so the remote can see which account is asking.
-- The window Kettle Video opens in has a Firefox profile of its own, with Firefox's own updates, telemetry and other online features switched off.
+- The window Kettle Video opens in has a Firefox profile of its own, with Firefox's own updates, telemetry and other online features switched off. An installed copy and a development copy each have their own.
 - The installer goes online only if mpv is missing and you say yes to installing it from Flathub.
 
 Any future feature that needs the network will only run when you choose it, and this section will say so first.

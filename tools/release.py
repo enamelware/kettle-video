@@ -70,7 +70,8 @@ NAMES_FILE = "installer/names.env"
 # Every name names.env must give; a release without one of them is never
 # built (the installer review fixes).
 NAME_KEYS = ("APP_NAME", "APP_ID", "ARCHIVE_NAME", "INSTALL_FOLDER", "DESKTOP_ENTRY",
-             "DEV_DESKTOP_ENTRY", "INSTALL_MARK", "ICON_FILE", "FIREFOX_PROFILE")
+             "DEV_DESKTOP_ENTRY", "INSTALL_MARK", "ICON_FILE", "FIREFOX_PROFILE",
+             "DEV_FIREFOX_PROFILE")
 INSTALLER = "installer/install.sh"
 # The shared update step install.sh runs (the installer's update step).
 UPDATER = "installer/update.py"

@@ -23,7 +23,8 @@ from urllib.parse import parse_qs, urlsplit
 
 from backend import (
     app_paths, app_update, continue_watching, folder_dialog, folder_finder, launch_options, library_index, movie_fixture, mpv,
-    onboarding, parsed_library, scanner, settings_screen, size_readout, update_check, vendor_path,
+    onboarding, parsed_library, resume_positions, scanner, settings_screen, size_readout, update_check,
+    vendor_path,
 )
 from backend.settings import SettingsError, load_settings, read_mpv_command, repo_root
 
@@ -69,7 +70,7 @@ def _launch_start() -> float:
 
 
 def make_handler(ui_dir: Path, logs_dir: Path, settings: dict, httpd_ref: dict, port: int, options=None,
-                 settings_file=None, mpv_setting_file=None):
+                 settings_file=None, mpv_setting_file=None, installed=False, app_id=None):
     """options: this launch's launch_options.LaunchOptions (the fresh start mode).
     Without it (most tests), normal use: no fresh start, mpv looked for.
     settings_file: the settings.json that onboarding saves the folders to
@@ -77,7 +78,10 @@ def make_handler(ui_dir: Path, logs_dir: Path, settings: dict, httpd_ref: dict, 
     (most tests) nothing is ever written.
     mpv_setting_file: the real settings.json, even in fresh start, which Look
     again reads mpv_command from (the mpv missing screen); only ever read. Without it, Look
-    again uses the setting from launch."""
+    again uses the setting from launch.
+    installed, app_id: an installed copy keeps mpv's resume positions in a
+    folder of its own (the each-copy-its-own-data work, backend/resume_positions.py).
+    Without them (most tests, a development copy), mpv's own folder."""
     expected_host = f"127.0.0.1:{port}"
     fresh_start = options is not None and options.fresh_start
     # Fresh start: mpv keeps its resume positions in the fresh folder.
@@ -95,6 +99,14 @@ def make_handler(ui_dir: Path, logs_dir: Path, settings: dict, httpd_ref: dict, 
     # Tests pass settings without data_dir; their logs folder is temporary.
     data_dir = Path(settings.get("data_dir") or logs_dir)
     index_path = data_dir / library_index.FILE_NAME
+    # The installed copy's own resume positions (the each-copy-its-own-data work): an
+    # update from the shared layout carries mpv's over; a brand-new install doesn't.
+    own_resume = installed and bool(app_id) and not fresh_start
+    if own_resume:
+        try:
+            resume_positions.note_first_launch(data_dir, index_path.exists())
+        except OSError as exc:
+            _log(f"resume positions: couldn't note this launch ({type(exc).__name__})")
     roots = {"movies": settings["movies_path"], "tv": settings["tv_path"]}
     library_lock = threading.Lock()
     library = {"index": library_index.load(index_path, _log), "answer": None}
@@ -877,6 +889,8 @@ def make_handler(ui_dir: Path, logs_dir: Path, settings: dict, httpd_ref: dict, 
             mpv_args = settings["mpv_args"]
             resume = settings["resume"]
             keep_awake = settings["keep_awake"]
+            resume_dir = resume_positions.folder_for_play(
+                own_resume, watch_later_dir, data_dir, app_id, command, mpv_args, resume, _log)
             # Continue watching (the Continue watching work): only files of the saved library,
             # and only with resume on. mpv writes into a fresh folder in /tmp.
             target, capture_dir = None, None
@@ -905,7 +919,7 @@ def make_handler(ui_dir: Path, logs_dir: Path, settings: dict, httpd_ref: dict, 
                 try:
                     result = mpv.play(
                         command, candidate, log_path, mpv_args, resume, keep_awake, capture_dir, control,
-                        title, watch_later_dir,
+                        title, resume_dir,
                     )
                 except Exception as exc:
                     print(f"playback failed: {type(exc).__name__}", file=sys.stderr)
@@ -1023,7 +1037,8 @@ def serve(root: Path, environ, port: int, httpd_ref: dict,
     if options.pretend_no_mpv:
         _log("pretending mpv is not installed (launch option)")
     try:
-        handler_cls = make_handler(ui_dir, logs_dir, settings, httpd_ref, port, options, settings_file, real_settings_file)
+        handler_cls = make_handler(ui_dir, logs_dir, settings, httpd_ref, port, options, settings_file,
+                                   real_settings_file, paths.installed, app_paths.names(root)["APP_ID"])
         httpd = ThreadingHTTPServer(("127.0.0.1", port), handler_cls)
         httpd_ref["server"] = httpd
         print(f"Serving on http://127.0.0.1:{port}/", flush=True)

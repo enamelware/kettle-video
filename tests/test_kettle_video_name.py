@@ -17,8 +17,11 @@ tracks is checked, except:
 The design system's old names have their own check,
 tests/test_design_system_name.py.
 
-Also: the launcher starts a fresh kettle-video-profile and never touches
-the old profile folder, in each case (old only, new only, both, neither),
+Also: the launcher starts a development copy's own fresh profile
+(kettle-video-dev-profile since the each-copy-its-own-data work; an
+installed copy's, kettle-video-profile, is checked by
+tests/test_each_copy_own_data.py) and never touches the old profile
+folder, in each case (old only, new only, both, neither),
 and install-shortcut.sh writes kettle-video-dev.desktop named Kettle Video
 (dev) (a development copy's own entry since the installer review fixes).
 Both run on temporary copies with a temporary home folder; the real
@@ -179,7 +182,7 @@ class FreshProfile(unittest.TestCase):
                      "KETTLE_LAUNCH_LOG", "MOZ_HEADLESS"):
             self.env.pop(name, None)
         self.old = self.home / ".mozilla" / "media-player-profile"
-        self.new = self.home / ".mozilla" / "kettle-video-profile"
+        self.new = self.home / ".mozilla" / "kettle-video-dev-profile"
 
     def tearDown(self):
         self.tmp.cleanup()

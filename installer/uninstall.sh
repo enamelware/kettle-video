@@ -8,16 +8,22 @@
 #
 # It removes what the installer (install.sh, update.py) put in place:
 #   - the app files: ~/.local/share/kettle-video/app (a shortcut to the
-#     current version) and ~/.local/share/kettle-video/versions;
+#     current version) and ~/.local/share/kettle-video/versions, with any
+#     download or switch-over an update left there when it was cut short;
 #   - the app menu entry (kettle-video.desktop);
-#   - the kiosk window's Firefox profile (kettle-video-profile), which holds
-#     nothing personal: the launcher rebuilds it at every launch (the designer's
-#     decision on the uninstaller work).
+#   - the installed copy's kiosk window Firefox profile (kettle-video-profile),
+#     which holds nothing personal: the launcher rebuilds it at every launch
+#     (the designer's decision on the uninstaller work). A development copy has
+#     its own profile (kettle-video-dev-profile), which is never touched.
 #
-# It keeps your data: the library and Continue watching
-# (~/.local/share/kettle-video/data), your settings
-# (~/.config/kettle-video) and the logs (~/.local/state/kettle-video/logs).
-# It removes those too only if you ask, and then only after you confirm.
+# It keeps your data: the library, Continue watching and resume positions
+# (~/.local/share/kettle-video/data), the resume positions the Flatpak mpv
+# keeps for the installed copy (~/.var/app/io.mpv.Mpv/data/kettle-video, see
+# backend/resume_positions.py), your settings (~/.config/kettle-video) and
+# the logs (~/.local/state/kettle-video/logs). It removes those too only if
+# you ask, and then only after you confirm. That is everything the installed
+# copy stores (tests/test_each_copy_own_data.py lists them); a development
+# copy keeps its own data in its own folder and is never touched.
 #
 # Every place comes from installer/names.env (beside this script) and the
 # same standard folders the installer uses (XDG_DATA_HOME, XDG_CONFIG_HOME
@@ -27,9 +33,10 @@
 # installer made, a place outside your home folder, the app still open) it
 # stops and says so, with nothing removed.
 #
-# It never touches your movies and TV shows, mpv (it stays installed, with
-# the resume positions it keeps itself), or Steam's files: the Steam
-# shortcut is removed by hand. It never uses sudo.
+# It never touches your movies and TV shows, mpv itself (it stays installed,
+# with the resume positions in its own folder, which a development copy
+# uses), or Steam's files: the Steam shortcut is removed by hand. It never
+# uses sudo.
 
 set -u
 
@@ -95,7 +102,7 @@ main() {
     esac
   }
   local data_home share_dir app_dir versions_dir data_dir config_dir state_dir logs_dir
-  local desktop_file
+  local desktop_file mpv_resume_dir
   data_home="$(place "${XDG_DATA_HOME:-}" .local/share)"
   share_dir="$data_home/$APP_ID"
   app_dir="$share_dir/app"
@@ -105,6 +112,9 @@ main() {
   state_dir="$(place "${XDG_STATE_HOME:-}" .local/state)/$APP_ID"
   logs_dir="$state_dir/logs"
   desktop_file="$data_home/applications/$DESKTOP_ENTRY"
+  # The installed copy's resume positions when mpv is the Flatpak, which can
+  # write only in its own folder (backend/resume_positions.py says the same).
+  mpv_resume_dir="$HOME/.var/app/io.mpv.Mpv/data/$APP_ID"
   # The kiosk window's profile, in the two places launch.sh keeps it
   # (system Firefox, Flatpak Firefox).
   local profiles=("$HOME/.mozilla/$FIREFOX_PROFILE"
@@ -120,7 +130,8 @@ main() {
     return 1
   }
   local where
-  for where in "$share_dir" "$desktop_file" "$config_dir" "$state_dir" "${profiles[@]}"; do
+  for where in "$share_dir" "$desktop_file" "$config_dir" "$state_dir" "${profiles[@]}" \
+               "$mpv_resume_dir"; do
     in_home "$where" ||
       stop "$where is outside your home folder ($HOME), so it is left alone."
   done
@@ -152,6 +163,17 @@ main() {
     { [ -d "$versions_dir" ] && [ ! -L "$versions_dir" ]; } ||
       stop "$versions_dir isn't the folder the installer made."
   fi
+
+  # Left over from an update that was cut short (backend/app_update.py's
+  # download folders, installer/update.py's switch-over shortcut): only
+  # those exact kinds, beside the app folder.
+  local leftovers=() entry_path
+  for entry_path in "$share_dir"/.download-* "$share_dir"/.app-*; do
+    case "$(basename -- "$entry_path")" in
+      .download-?*) [ -d "$entry_path" ] && [ ! -L "$entry_path" ] && leftovers+=("$entry_path") ;;
+      .app-?*) [ -L "$entry_path" ] && leftovers+=("$entry_path") ;;
+    esac
+  done
 
   # --- the menu entry: only the one that starts this app ---
   # Any other entry with that name (a development copy's, made by an older
@@ -188,7 +210,7 @@ main() {
   fi
 
   # --- your movies and TV shows are never inside what is removed ---
-  local settings_file="$config_dir/settings.json" media=""
+  local settings_file="$config_dir/settings.json" media="" moved_data=""
   if [ -f "$settings_file" ]; then
     media="$(python3 -I -c '
 import json, sys
@@ -203,6 +225,24 @@ if isinstance(data, dict):
         if isinstance(value, str) and value.strip():
             print(value.strip())
 ' "$settings_file" 2>/dev/null)"
+    # A data_dir set in settings.json moves the library elsewhere
+    # (backend/settings.py: a relative one counts from the app's own folder).
+    # Not a place the installer made, so it is only named, never removed.
+    moved_data="$(python3 -I -c '
+import json, os, sys
+try:
+    with open(sys.argv[1], encoding="utf-8") as f:
+        data = json.load(f)
+except (OSError, ValueError):
+    sys.exit(0)
+value = data.get("data_dir") if isinstance(data, dict) else None
+if isinstance(value, str) and value.strip():
+    print(os.path.join(sys.argv[2], os.path.expanduser(value.strip())))
+' "$settings_file" "$share_dir" 2>/dev/null)"
+    if [ -n "$moved_data" ] &&
+       [ "$(realpath -m -- "$moved_data" 2>/dev/null)" = "$(realpath -m -- "$data_dir" 2>/dev/null)" ]; then
+      moved_data=""
+    fi
   fi
   # Stop if a media folder is (or is inside) a place about to be removed.
   guard_media() {
@@ -221,7 +261,7 @@ if isinstance(data, dict):
       esac
     done <<<"$media"
   }
-  for where in "$app_dir" "$versions_dir" "${found_profiles[@]}"; do
+  for where in "$app_dir" "$versions_dir" "${found_profiles[@]}" "${leftovers[@]}"; do
     if [ -e "$where" ]; then guard_media "$where"; fi
   done
   if [ -n "$entry_found" ]; then guard_media "$desktop_file"; fi
@@ -241,10 +281,17 @@ if isinstance(data, dict):
   fi
   say ""
   say "It keeps your data, unless you ask below:"
-  say "- your library and Continue watching: $data_dir"
+  say "- your library, Continue watching and resume positions: $data_dir"
+  if [ -e "$mpv_resume_dir" ] || [ -L "$mpv_resume_dir" ]; then
+    say "- the resume positions mpv (the Flatpak) keeps for $APP_NAME: $mpv_resume_dir"
+  fi
   say "- your settings: $config_dir"
   say "- the logs: $logs_dir"
-  say "Your movies and TV shows, mpv and Steam are never touched."
+  if [ -n "$moved_data" ]; then
+    say "Your settings keep the library in $moved_data: that folder is always left"
+    say "alone. Delete it by hand if you no longer want it."
+  fi
+  say "Your movies and TV shows, mpv itself (with its own resume positions) and Steam are never touched."
   say ""
   if ! ask "Uninstall $APP_NAME?"; then
     say "Nothing was removed."
@@ -252,8 +299,12 @@ if isinstance(data, dict):
   fi
 
   local remove_data=""
-  if ask "Also delete your library, settings and logs? (If you install $APP_NAME again, it starts from scratch.)"; then
-    for where in "$data_dir" "$config_dir" "$logs_dir"; do
+  local data_places=("$data_dir" "$config_dir" "$logs_dir")
+  if [ -e "$mpv_resume_dir" ] || [ -L "$mpv_resume_dir" ]; then
+    data_places+=("$mpv_resume_dir")
+  fi
+  if ask "Also delete your library, resume positions, settings and logs? (If you install $APP_NAME again, it starts from scratch.)"; then
+    for where in "${data_places[@]}"; do
       if [ -e "$where" ] || [ -L "$where" ]; then
         { [ -d "$where" ] && [ ! -L "$where" ]; } ||
           stop "$where isn't the folder the installer made, so it is left alone."
@@ -261,13 +312,13 @@ if isinstance(data, dict):
       fi
     done
     say "This deletes them for good; it can't be undone:"
-    say "- $data_dir"
-    say "- $config_dir"
-    say "- $logs_dir"
-    if ask "Delete your library, settings and logs?"; then
+    for where in "${data_places[@]}"; do
+      say "- $where"
+    done
+    if ask "Delete your library, resume positions, settings and logs?"; then
       remove_data=1
     else
-      say "Your library, settings and logs are kept."
+      say "Your library, resume positions, settings and logs are kept."
     fi
   fi
 
@@ -286,14 +337,17 @@ if isinstance(data, dict):
     remove "$profile"
   done
   if [ -n "$remove_data" ]; then
-    remove "$data_dir"
-    remove "$config_dir"
-    remove "$logs_dir"
+    for where in "${data_places[@]}"; do
+      remove "$where"
+    done
     rmdir -- "$state_dir" 2>/dev/null
   fi
   # The versions first, the app shortcut last: if this stops part way, the
   # shortcut is still there and running this again finishes the job.
   [ -d "$versions_dir" ] && remove "$versions_dir"
+  for where in "${leftovers[@]}"; do
+    remove "$where"
+  done
   remove "$app_dir"
   rmdir -- "$share_dir" 2>/dev/null
 
@@ -304,9 +358,11 @@ if isinstance(data, dict):
     say "Done. $APP_NAME is uninstalled."
   fi
   if [ -n "$remove_data" ]; then
-    say "Your library, settings and logs were deleted."
+    say "Your library, resume positions, settings and logs were deleted: installing $APP_NAME"
+    say "again starts from scratch."
   else
-    say "Your library, settings and logs are kept; installing $APP_NAME again picks them up."
+    say "Your library, resume positions, settings and logs are kept; installing $APP_NAME again"
+    say "picks them up."
   fi
   say "mpv is still installed."
   say ""

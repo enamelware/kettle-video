@@ -77,9 +77,10 @@ def force_close(log_text):
 
 
 def profile_dir(home):
+    """The development copy's own kiosk profile (the each-copy-its-own-data work)."""
     if shutil.which("firefox"):
-        return home / ".mozilla/kettle-video-profile"
-    return home / ".var/app/org.mozilla.firefox/data/kettle-video-profile"
+        return home / ".mozilla/kettle-video-dev-profile"
+    return home / ".var/app/org.mozilla.firefox/data/kettle-video-dev-profile"
 
 
 def mark_unfinished_starts(home):

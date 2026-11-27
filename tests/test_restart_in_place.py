@@ -20,7 +20,8 @@ Checked:
     answering again from the new version's folder);
   - the server comes back on the new version (0.3.0), the page loads again
     from it, and says "Updated to 0.3.0" once;
-  - the data folder is byte-for-byte unchanged by the update;
+  - the data folder is byte-for-byte unchanged by the update (apart from the
+    date of the update check and the first launch's resume carry-over note);
   - with a version that can't start, the update rolls back and the previous
     version restarts in place, saying so.
 
@@ -244,6 +245,10 @@ class RestartInPlace(unittest.TestCase):
         # Data untouched (the check only keeps its date, before the update).
         after = snapshot(self.data)
         before["update_check.json"] = after.get("update_check.json")
+        # The installed copy's first launch notes it has no resume positions
+        # to carry over (the each-copy-its-own-data work): nothing else.
+        self.assertEqual(after.get("resume_positions.json"), b'{"carry_over": false}\n')
+        before["resume_positions.json"] = after["resume_positions.json"]
         self.assertEqual(after, before)
         self.assertEqual(sorted(p.name for p in (self.places["APP_DIR"].parent / "versions").iterdir()),
                          [os.path.basename(new_folder)])
@@ -262,6 +267,10 @@ class RestartInPlace(unittest.TestCase):
         self.assertEqual(seen["note"], "The update to 0.3.0 didn't work, so 0.2.0 was put back as it was.")
         after = snapshot(self.data)
         before["update_check.json"] = after.get("update_check.json")
+        # The installed copy's first launch notes it has no resume positions
+        # to carry over (the each-copy-its-own-data work): nothing else.
+        self.assertEqual(after.get("resume_positions.json"), b'{"carry_over": false}\n')
+        before["resume_positions.json"] = after["resume_positions.json"]
         self.assertEqual(after, before)
         self.assertEqual(os.path.realpath(self.places["APP_DIR"]), old_folder)
         self.assertEqual(code, 0, log)

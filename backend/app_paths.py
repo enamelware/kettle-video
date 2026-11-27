@@ -28,6 +28,13 @@ Names come from installer/names.env, the one place the installer series
 keeps them. Pure logic apart from reading that file and checking the mark.
 
     python3 -m backend.app_paths logs     prints this copy's logs folder
+    python3 -m backend.app_paths profile  prints the name of this copy's
+                                          kiosk Firefox profile
+
+Each copy keeps its own data (the each-copy-its-own-data work): the
+kiosk window's Firefox profile is FIREFOX_PROFILE for the installed copy and
+DEV_FIREFOX_PROFILE for a development copy, so neither reads the other's
+browser storage. Resume positions: backend/resume_positions.py.
 
 installer/install.sh works out the same installed places in shell;
 tests/test_installer.py keeps the two in step. installer/uninstall.sh
@@ -45,6 +52,8 @@ NAMES_FILE = Path("installer") / "names.env"
 # Used only if names.env can't be read.
 DEFAULT_APP_ID = "kettle-video"
 DEFAULT_INSTALL_MARK = "kettle-video-installed"
+DEFAULT_FIREFOX_PROFILE = "kettle-video-profile"
+DEFAULT_DEV_FIREFOX_PROFILE = "kettle-video-dev-profile"
 
 
 def read_names(text: str) -> dict:
@@ -69,6 +78,8 @@ def names(app_dir: Path) -> dict:
         found = {}
     found.setdefault("APP_ID", DEFAULT_APP_ID)
     found.setdefault("INSTALL_MARK", DEFAULT_INSTALL_MARK)
+    found.setdefault("FIREFOX_PROFILE", DEFAULT_FIREFOX_PROFILE)
+    found.setdefault("DEV_FIREFOX_PROFILE", DEFAULT_DEV_FIREFOX_PROFILE)
     return found
 
 
@@ -116,13 +127,23 @@ def for_app(app_dir: Path, environ: Optional[Mapping[str, str]] = None) -> AppPa
                     places["LOGS_DIR"], True)
 
 
+def firefox_profile(app_dir: Path) -> str:
+    """The name of the kiosk window's Firefox profile folder for the copy in
+    app_dir: each copy has its own (the each-copy-its-own-data work)."""
+    found = names(app_dir)
+    return found["FIREFOX_PROFILE"] if is_installed(app_dir) else found["DEV_FIREFOX_PROFILE"]
+
+
 def main(argv=None) -> int:
     argv = sys.argv[1:] if argv is None else argv
     app_dir = Path(__file__).resolve().parent.parent
     if argv == ["logs"]:
         print(for_app(app_dir).logs_dir)
         return 0
-    print("usage: python3 -m backend.app_paths logs", file=sys.stderr)
+    if argv == ["profile"]:
+        print(firefox_profile(app_dir))
+        return 0
+    print("usage: python3 -m backend.app_paths logs|profile", file=sys.stderr)
     return 2
 
 

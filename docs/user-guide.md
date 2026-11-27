@@ -13,10 +13,14 @@ When you close a video and play the same file again, it continues 5 seconds befo
 - The player being told to stop from outside (for example Steam closing the app): saved with a normal mpv install; **not saved with the Flatpak**, because the Flatpak wrapper doesn't pass the stop message on to mpv.
 - The player being force-closed: never saved.
 
-**Where positions are kept:** in mpv's own folder, one small file per video (plus small "redirect" files for its parent folders). Nothing is written next to your media.
+**Where positions are kept:** one small file per video (plus small "redirect" files for its parent folders), in a `watch_later` folder. Nothing is written next to your media. The installed Kettle Video and a development copy (a git folder) each keep their own, so one never changes the other's.
 
-- Flatpak mpv: `~/.var/app/io.mpv.Mpv/.local/state/mpv/watch_later/` (confirmed on the Nova).
-- Normal mpv install: `~/.local/state/mpv/watch_later/` (mpv's default; not checked on a device yet).
+- Installed, with the Flatpak mpv: `~/.var/app/io.mpv.Mpv/data/kettle-video/watch_later/` (the Flatpak mpv can't save anywhere else that lasts).
+- Installed, with a normal mpv install: `~/.local/share/kettle-video/data/watch_later/`.
+- A development copy: mpv's own folder, as before: `~/.var/app/io.mpv.Mpv/.local/state/mpv/watch_later/` with the Flatpak mpv (confirmed on the Nova), `~/.local/state/mpv/watch_later/` with a normal mpv install (mpv's default; not checked on a device yet).
+- A `--watch-later-dir` in `mpv_args` wins over all of these.
+
+An installed copy made before each copy had its own keeps its positions: the first time it plays something after the update, it copies the ones in mpv's own folder into its own, once (mpv's own folder is only read).
 
 **To clear them**, delete the files in that folder. Every video then starts from the beginning.
 
@@ -116,13 +120,14 @@ To test the "mpv not found" screen, change that shortcut's Launch Options to `KE
 | What | Where |
 |---|---|
 | The app files (replaced by an update) | `~/.local/share/kettle-video/app`, a shortcut to the current version's folder in `~/.local/share/kettle-video/versions` |
-| Your saved library | `~/.local/share/kettle-video/data` |
+| Your saved library, Continue watching and resume positions | `~/.local/share/kettle-video/data` |
+| Resume positions with the Flatpak mpv | `~/.var/app/io.mpv.Mpv/data/kettle-video` |
 | Settings | `~/.config/kettle-video/settings.json` (made on the first launch) |
 | Logs (attach them to a GitHub issue) | `~/.local/state/kettle-video/logs` |
 | The app menu entry | `~/.local/share/applications/kettle-video.desktop` (a development copy's is `kettle-video-dev.desktop`) |
 | The app window's Firefox profile (rebuilt at every launch) | `~/.mozilla/kettle-video-profile`, or `~/.var/app/org.mozilla.firefox/data/kettle-video-profile` with Flatpak Firefox |
 
-A development copy (a git folder) keeps `settings.json`, `data/` and `logs/` in its own folder. An installed copy is told apart by a small mark file the installer leaves in its app folder.
+A development copy (a git folder) keeps `settings.json`, `data/` and `logs/` in its own folder, its own Firefox profile `kettle-video-dev-profile` beside the installed copy's, and its resume positions in mpv's own folder. An installed copy is told apart by a small mark file the installer leaves in its app folder.
 
 ## Uninstalling
 
@@ -135,7 +140,7 @@ bash ~/.local/share/kettle-video/app/installer/uninstall.sh
 It first lists what it will remove and what it keeps, then asks before doing anything.
 
 - It removes the app files, **Kettle Video** in the app menu and the app window's own Firefox profile (`kettle-video-profile`, which holds nothing personal). A menu entry that doesn't open the installed copy, such as a development copy's, is left as it is.
-- It **keeps your data**: your saved library and Continue watching, your settings and the logs. Install Kettle Video again later and it finds them. It asks whether to delete them too, and if you say yes, asks once more to confirm, because that can't be undone.
-- It never touches your movies and TV shows, mpv (it stays installed, with its own resume positions) or Steam's files.
+- It **keeps your data**: your saved library and Continue watching, your resume positions, your settings and the logs. Install Kettle Video again later and it finds them. It asks whether to delete them too, and if you say yes, asks once more to confirm, because that can't be undone. After that, installing again starts from scratch, as a first launch.
+- It never touches your movies and TV shows, mpv itself (it stays installed, with the resume positions in its own folder), a development copy (its folder, its Firefox profile `kettle-video-dev-profile`) or Steam's files. If `data_dir` in your settings moves the library somewhere else, it names that folder and leaves it alone.
 - If anything looks unexpected (Kettle Video isn't installed there, a folder isn't one the installer made, a place outside your home folder, or Kettle Video is still open), it stops and says why, with nothing removed.
 - One step is yours: remove Kettle Video from Steam by hand. In Desktop Mode, right-click it in your Steam Library and choose **Manage**, then **Remove non-Steam game from your library**.
