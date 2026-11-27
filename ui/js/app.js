@@ -20,6 +20,7 @@ const playingStatusEl = document.getElementById("playing-status");
 const confirmEl = document.getElementById("confirm-remove");
 // Update and restart's question (issue 112), asked from Settings.
 const confirmUpdateEl = document.getElementById("confirm-update");
+const branchPickerEl = document.getElementById("branch-picker");
 const sections = {
   movies: document.querySelector('.source[data-source="movies"]'),
   tv: document.querySelector('.source[data-source="tv"]'),
@@ -1263,7 +1264,7 @@ async function main() {
     if (homeShown() && !keyboard.isBusy()) openMenu(false, menuButtonEl);
   });
   // Registered first, so the choice below starts from a focused element.
-  for (const dialog of [menuEl, confirmEl, confirmUpdateEl]) {
+  for (const dialog of [menuEl, confirmEl, confirmUpdateEl, branchPickerEl]) {
     for (const type of ["en-select", "en-cancel"]) {
       dialog.addEventListener(type, () => keepFocusAfterPicker(keyboard));
     }

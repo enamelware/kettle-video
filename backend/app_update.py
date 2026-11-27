@@ -26,8 +26,11 @@ A development copy (a git checkout without the installer's mark): the
 copy's own main is fetched and fast-forwarded, only with no local changes,
 only on main; then the same restart.
 
-The data folder (settings, library, resume positions, history, pictures) is
-never opened here, and neither is the settings file.
+Try a branch, Back to main and Restore data (the "Try a branch" work),
+development copies only, take the same one slot and the same restart; the
+git, the backups and the restore are backend/try_branch.py, the only code
+here that opens the data folder or the settings file, and only for those
+three. Update and restart and Pull never open either.
 """
 
 import importlib.util
@@ -41,7 +44,9 @@ import urllib.request
 from pathlib import Path
 from typing import Callable, Optional
 
-from backend import app_paths, update_check
+from datetime import datetime
+
+from backend import app_paths, try_branch, update_check
 
 # The restart's message for the page, handed to the new server (one read).
 NOTE_ENV = "KETTLE_UPDATE_NOTE"
@@ -58,7 +63,9 @@ PULL_TIMEOUT_S = 120
 
 IDLE, DOWNLOADING, INSTALLING, PULLING, RESTARTING, FAILED, CANCELLED = (
     "idle", "downloading", "installing", "pulling", "restarting", "failed", "cancelled")
-RUNNING = (DOWNLOADING, INSTALLING, PULLING, RESTARTING)
+# Try a branch, Back to main and Restore data (the "Try a branch" work).
+SWITCHING, BACKING_UP, CHECKING_START, RESTORING = ("switching", "backing up", "checking", "restoring")
+RUNNING = (DOWNLOADING, INSTALLING, PULLING, RESTARTING, SWITCHING, BACKING_UP, CHECKING_START, RESTORING)
 
 # The words the page shows, in Enamel's toast.
 INSTALLING_TEXT = "Installing…"
@@ -231,7 +238,15 @@ class Updater:
     def __init__(self, root: Path, log: Callable[[str], None], restart: Callable[[Path, str], None],
                  is_playing: Callable[[], bool], environ=None,
                  download: Optional[Callable] = None, installer: Optional[Callable] = None,
-                 git: Optional[Callable] = None):
+                 git: Optional[Callable] = None, data_dir: Optional[Path] = None,
+                 settings_file: Optional[Path] = None, media_roots: Optional[Callable] = None,
+                 pulls: Optional[Callable] = None, start_check: Optional[Callable] = None,
+                 now: Optional[Callable] = None):
+        """data_dir, settings_file: this copy's own (never a fresh start's),
+        for the backups; without them (most tests) no branch is switched.
+        media_roots(): the media folders now, never backed up. pulls,
+        start_check, now: stand-ins for GitHub's pull request list, the
+        installer's start check and the clock."""
         self.root = Path(root)
         self.log = log
         self.restart = restart
@@ -244,6 +259,14 @@ class Updater:
         self.cancel_asked = threading.Event()
         self.state = {"state": IDLE, "text": ""}
         self.offer = None  # the newer release found by the last check
+        self.data_dir = Path(data_dir) if data_dir else None
+        self.settings_file = Path(settings_file) if settings_file else None
+        self.media_roots = media_roots or (lambda: [])
+        self._pulls = pulls or try_branch.fetch_pulls
+        self._start_check = start_check
+        self._now = now or datetime.now
+        self.list_lock = threading.Lock()
+        self.listed = {}  # branch: label, from the last Try a branch list
 
     # What the page sees.
     def status(self) -> dict:
@@ -461,6 +484,192 @@ class Updater:
             return "current", None
         self.log(f"update: main pulled, {before[:7]} to {after[:7]}")
         return "pulled", after
+
+    # --- Try a branch, Back to main, Restore data (development copies) ---
+
+    def can_switch(self) -> bool:
+        """A development copy with its own data folder: the branch rows show."""
+        return self.data_dir is not None and self.settings_file is not None \
+            and update_check.is_development(self.root)
+
+    def branch_state(self) -> Optional[dict]:
+        """For Settings › About, read from the device only (never online):
+        the branch the copy is on (None on main), its label, and the newest
+        backup. None when this copy can't switch."""
+        if not self.can_switch():
+            return None
+        try:
+            branch = try_branch.current_branch(self.root, self._git)
+            commit = None if branch else try_branch.head(self.root, self._git)
+        except Exception as exc:  # git missing: no branch rows to offer
+            self.log(f"try a branch: couldn't read the branch ({type(exc).__name__})")
+            return None
+        backups = try_branch.list_backups(self.data_dir)
+        on = None
+        if branch != try_branch.MAIN:
+            name = branch or (commit or "")[:7]
+            label = next((b.get("to_label") for b in backups if b.get("to") == branch and branch), None)
+            on = {"branch": name, "label": label or name}
+        return {"on": on, "restore": try_branch.backup_summary(backups[0]) if backups else None}
+
+    def list_branches(self) -> dict:
+        """Try a branch's list: the one time it goes online, only when the
+        designer chooses it. {"ok": True, "branches": [...], "titles": bool}
+        or {"ok": False, "text": why}."""
+        if not self.can_switch():
+            return {"ok": False, "text": CANT_UPDATE_HERE}
+        if not self.list_lock.acquire(blocking=False):
+            return {"ok": False, "text": try_branch.LISTING_TEXT}
+        try:
+            current = try_branch.current_branch(self.root, self._git)
+            names = try_branch.remote_branches(self.root, self._git)
+            try:
+                pulls, titles = self._pulls(_version(self.root)), True
+            except update_check.CheckFailed as exc:
+                self.log(f"try a branch: no pull request list ({exc}); branches only")
+                pulls, titles = [], False
+        except update_check.CheckFailed as exc:
+            self.log(f"try a branch: couldn't list the branches ({exc})")
+            return {"ok": False, "text": try_branch.LIST_OFFLINE if exc.offline else try_branch.LIST_LATER}
+        except Exception as exc:  # git missing, or anything else unexpected
+            self.log(f"try a branch: couldn't list the branches ({type(exc).__name__})")
+            return {"ok": False, "text": try_branch.LIST_LATER}
+        finally:
+            self.list_lock.release()
+        rows = try_branch.picker_list(names, pulls, current)
+        with self.lock:
+            self.listed = {row["branch"]: row["label"] for row in rows}
+        self.log(f"try a branch: {len(rows)} branches listed, "
+                 f"{sum(1 for row in rows if row['pull'])} with an open pull request")
+        if not rows:
+            return {"ok": False, "text": try_branch.NO_BRANCHES}
+        return {"ok": True, "branches": rows, "titles": titles}
+
+    def start_switch(self, branch: str) -> Optional[str]:
+        """Switch to a branch from the last list. None once started."""
+        if not self.can_switch():
+            return CANT_UPDATE_HERE
+        with self.lock:
+            label = self.listed.get(branch) if isinstance(branch, str) else None
+        if label is None:
+            return try_branch.NOT_LISTED
+        return self._start_branch(branch, label, fetch=True)
+
+    def start_back_to_main(self) -> Optional[str]:
+        """Back to the copy's own main, never online. None once started."""
+        if not self.can_switch():
+            return CANT_UPDATE_HERE
+        try:
+            if try_branch.current_branch(self.root, self._git) == try_branch.MAIN:
+                return try_branch.ALREADY_ON_MAIN
+        except Exception:
+            return try_branch.SWITCH_LATER
+        return self._start_branch(try_branch.MAIN, try_branch.MAIN, fetch=False)
+
+    def _start_branch(self, branch: str, label: str, fetch: bool) -> Optional[str]:
+        refused = self._begin(SWITCHING, try_branch.switching_text(label))
+        if refused:
+            return refused
+        self.log(f"try a branch: switching to {branch}")
+        threading.Thread(target=self._switch, args=(branch, label, fetch), daemon=True).start()
+        return None
+
+    def _switch(self, branch: str, label: str, fetch: bool) -> None:
+        # Every way out ends with plain words: the page never waits for ever.
+        git, root = self._git, self.root
+        backup = None
+        try:
+            # This copy's own start check, read before anything changes.
+            start_check = self._start_check or load_installer(root).started_cleanly
+            before_branch = try_branch.current_branch(root, git)
+            before = try_branch.head(root, git)
+            start = try_branch.fetch_branch(root, git, branch) if fetch else None
+            try_branch.ready(root, git, branch, start)
+            if try_branch.unsafe_data_dir(self.data_dir, root, self.media_roots(), self.environ):
+                raise try_branch.Refused(try_branch.UNSAFE_DATA)
+            self._set(BACKING_UP, try_branch.BACKING_UP_TEXT)
+            try:
+                backup = try_branch.make_backup(self.data_dir, self.settings_file, {
+                    "from": before_branch, "from_label": self._label_of(before_branch),
+                    "commit": before, "to": branch, "to_label": label}, self._now())
+            except OSError as exc:
+                self.log(f"try a branch: couldn't back up the data ({type(exc).__name__}); nothing was changed")
+                raise try_branch.Refused(try_branch.BACKUP_FAILED)
+            self.log(f"try a branch: data backed up ({backup['id']})")
+            self._set(SWITCHING, try_branch.switching_text(label))
+            try_branch.switch_to(root, git, branch, start)
+        except try_branch.Refused as exc:
+            if backup is not None:
+                try_branch.remove_backup(self.data_dir, backup["id"])
+            self.log(f"try a branch: not switched ({exc})")
+            self._set(FAILED, str(exc))
+            return
+        except update_check.CheckFailed as exc:
+            self.log(f"try a branch: couldn't switch ({exc}); nothing was changed")
+            self._set(FAILED, try_branch.SWITCH_OFFLINE if exc.offline else try_branch.SWITCH_LATER)
+            return
+        except Exception as exc:  # git missing, or anything else unexpected
+            if backup is not None:
+                try_branch.remove_backup(self.data_dir, backup["id"])
+            self.log(f"try a branch: couldn't switch ({type(exc).__name__}); nothing was changed")
+            self._set(FAILED, try_branch.SWITCH_LATER)
+            return
+        self._set(CHECKING_START, try_branch.CHECKING_TEXT)
+        try:
+            ok, why = start_check(root, {k: v for k, v in self.environ.items() if k != NOTE_ENV})
+        except Exception as exc:
+            ok, why = False, f"the check itself failed ({type(exc).__name__})"
+        if not ok:
+            back = try_branch.go_back(root, git, before_branch, before)
+            try_branch.remove_backup(self.data_dir, backup["id"])
+            back_on = self._label_of(before_branch) or before[:7]
+            self.log(f"try a branch: {branch} didn't start cleanly: {why} "
+                     f"({'back on' if back else 'could not go back to'} {back_on})")
+            self._set(FAILED, try_branch.didnt_start_text(label, back_on, why) if back
+                      else f"{label} didn't start, and Kettle Video couldn't go back to {back_on}. "
+                           "Choose Back to main.")
+            return
+        self.log(f"try a branch: now on {branch} ({try_branch.head(root, git)[:7]})")
+        self._restart(root, "Back on main" if branch == try_branch.MAIN else try_branch.now_on_text(label))
+
+    def _label_of(self, branch: Optional[str]) -> Optional[str]:
+        if branch is None:
+            return None
+        with self.lock:
+            listed = self.listed.get(branch)
+        if listed:
+            return listed
+        for backup in try_branch.list_backups(self.data_dir):
+            if backup.get("to") == branch and backup.get("to_label"):
+                return backup["to_label"]
+        return branch
+
+    def start_restore(self, backup_id: str) -> Optional[str]:
+        """Restore data from before the last switch: only the newest backup,
+        the one the confirm named. None once started."""
+        if not self.can_switch():
+            return CANT_UPDATE_HERE
+        backups = try_branch.list_backups(self.data_dir)
+        if not backups or backups[0]["id"] != backup_id:
+            return try_branch.NO_BACKUP
+        if try_branch.unsafe_data_dir(self.data_dir, self.root, self.media_roots(), self.environ):
+            return try_branch.UNSAFE_RESTORE
+        refused = self._begin(RESTORING, try_branch.RESTORING_TEXT)
+        if refused:
+            return refused
+        self.log(f"try a branch: restoring the data from {backup_id}")
+        threading.Thread(target=self._restore, args=(backups[0],), daemon=True).start()
+        return None
+
+    def _restore(self, backup: dict) -> None:
+        try:
+            try_branch.restore(self.data_dir, self.settings_file, backup)
+        except Exception as exc:
+            self.log(f"try a branch: couldn't restore ({type(exc).__name__}); the data is as it was")
+            self._set(FAILED, try_branch.RESTORE_FAILED)
+            return
+        self.log(f"try a branch: data restored from {backup['id']}")
+        self._restart(self.root, try_branch.restored_text(backup))
 
 
 def _version(root: Path) -> str:

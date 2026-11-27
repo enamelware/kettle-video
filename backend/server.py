@@ -120,9 +120,15 @@ def make_handler(ui_dir: Path, logs_dir: Path, settings: dict, httpd_ref: dict, 
     # Update and restart, Pull the latest version (the Update and restart work): only after a
     # check, a yes, and never while a film plays. The restart's message for
     # the page, read once (it came from the server before the restart).
+    # Try a branch, Back to main, Restore data (the "Try a branch" work): a
+    # development copy's own data folder and settings file, never a fresh
+    # start's (nor in tests that pass no settings file).
+    own_data = settings_file is not None and not fresh_start
     updater = app_update.Updater(
         ui_dir.parent, _log, restart=lambda root, note: request_restart(httpd_ref, root, note),
-        is_playing=lambda: play_state["state"] == "playing")
+        is_playing=lambda: play_state["state"] == "playing",
+        data_dir=data_dir if own_data else None, settings_file=settings_file if own_data else None,
+        media_roots=lambda: [settings.get("movies_path"), settings.get("tv_path")])
     update_note = {"text": httpd_ref.pop("update_note", None)}
     update_note_lock = threading.Lock()
     # Onboarding (the folder finder): the last search for folders with videos. Its
@@ -349,7 +355,9 @@ def make_handler(ui_dir: Path, logs_dir: Path, settings: dict, httpd_ref: dict, 
             if self.path == "/api/continue":
                 return self._handle_continue()
             if self.path == "/api/updates/status":
-                return self._send_json(HTTPStatus.OK, {**updater.status(), "boot": BOOT_ID})
+                status = updater.status()
+                return self._send_json(HTTPStatus.OK, {
+                    **status, "running": status["state"] in app_update.RUNNING, "boot": BOOT_ID})
             if self.path == "/api/onboarding/folders":
                 return self._handle_find_folders()
             if self.path == "/api/onboarding":
@@ -398,6 +406,15 @@ def make_handler(ui_dir: Path, logs_dir: Path, settings: dict, httpd_ref: dict, 
                 return self._handle_update_start(updater.start_pull)
             if self.path == "/api/updates/cancel":
                 return self._send_json(HTTPStatus.OK, {"ok": updater.cancel()})
+            if self.path == "/api/branches/list":
+                # The one time Try a branch goes online: only on the designer's choice.
+                return self._send_json(HTTPStatus.OK, updater.list_branches())
+            if self.path == "/api/branches/switch":
+                return self._handle_branch_start("branch", updater.start_switch)
+            if self.path == "/api/branches/main":
+                return self._handle_update_start(updater.start_back_to_main)
+            if self.path == "/api/branches/restore":
+                return self._handle_branch_start("id", updater.start_restore)
             if self.path == "/api/updates/note":
                 with update_note_lock:
                     text, update_note["text"] = update_note["text"], None
@@ -714,6 +731,9 @@ def make_handler(ui_dir: Path, logs_dir: Path, settings: dict, httpd_ref: dict, 
                     "last_checked": update_check.last_checked_text(
                         update_check.load_last_checked(data_dir), date.today()),
                     "development": update_check.is_development(ui_dir.parent),
+                    # Try a branch (the "Try a branch" work): the branch the copy is on
+                    # and the newest backup, or None where the rows never show.
+                    "branches": updater.branch_state(),
                 },
             })
 
@@ -742,6 +762,15 @@ def make_handler(ui_dir: Path, logs_dir: Path, settings: dict, httpd_ref: dict, 
             if not isinstance(version, str):
                 return self._send_json(HTTPStatus.BAD_REQUEST, {"error": "missing version"})
             self._handle_update_start(lambda: updater.start_update(version))
+
+        def _handle_branch_start(self, key, start):
+            try:
+                value = self._read_json_body().get(key)
+            except (json.JSONDecodeError, UnicodeDecodeError, AttributeError):
+                return self._send_json(HTTPStatus.BAD_REQUEST, {"error": "invalid JSON body"})
+            if not isinstance(value, str):
+                return self._send_json(HTTPStatus.BAD_REQUEST, {"error": f"missing {key}"})
+            self._handle_update_start(lambda: start(value))
 
         def _handle_update_start(self, start):
             # Under the play lock, so a film can't start in between (the Update and restart work).

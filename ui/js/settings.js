@@ -16,6 +16,12 @@
 // confirm (Cancel first), then the server downloads and installs (or pulls)
 // in the background, its progress in Enamel's toast; B cancels while it
 // downloads. The app then restarts in place and this page reloads itself.
+// Try a branch (the "Try a branch" work), on a development copy only: A lists the
+// remote's branches (the row says it goes online) in Enamel's picker, open
+// pull requests first; a branch, then a yes, backs up the data, switches and
+// restarts in place, as Pull does. Back to main, while on a branch, says
+// which one; Restore data from before the last switch names the backup's
+// branch and date in its confirm.
 
 import * as api from "./api.js";
 import { addSpan } from "./dom.js";
@@ -32,6 +38,10 @@ const NO_NOTES = "This version came without notes.";
 const UPDATE_FAILED = "Couldn't update right now. Nothing was changed. Try again later.";
 // How often the page asks how the update is going.
 const UPDATE_POLL_MS = 400;
+const LISTING = "Listing branches…";
+const LIST_FAILED = "Couldn't list the branches right now. Try again later.";
+const NO_TITLES = "Pull requests couldn't be read, so only branch names show.";
+const TRY_META = "Goes online to list the branches on GitHub";
 const ROWS = ".settings-row";
 
 // keyboard: the app's keyboard controller. onboarding: the onboarding screen,
@@ -53,6 +63,8 @@ export function createSettings({ keyboard, onboarding, onHints, onClose, onFolde
   const licenceNotes = licenceEl.querySelector('[data-role="notes"]');
   const licenceText = licenceEl.querySelector('[data-role="text"]');
   const confirmEl = document.getElementById("confirm-update");
+  const branchPickerEl = document.getElementById("branch-picker");
+  const branchRowsEl = branchPickerEl.querySelector('[data-role="rows"]');
   let open = false;
   let view = "list"; // "list", "folder" (onboarding's screen) or "licence"
   let data = null; // the last /api/settings answer
@@ -63,6 +75,8 @@ export function createSettings({ keyboard, onboarding, onHints, onClose, onFolde
   const update = { checking: false, result: null, lastChecked: null };
   // An update or pull running (issue 112): { boot, cancelable }, else null.
   let updating = null;
+  // Try a branch's list: whether it runs, and its last words (never saved).
+  const branches = { listing: false, text: "" };
 
   function row(kind, title, meta) {
     const item = document.createElement("li");
@@ -94,20 +108,54 @@ export function createSettings({ keyboard, onboarding, onHints, onClose, onFolde
     status.textContent = update.checking ? CHECKING : update.result ? update.result.text : "";
     status.hidden = !status.textContent;
     check.append(status);
+    return [check, ...foundRows(), ...branchRows()];
+  }
+
+  function foundRows() {
     const found = !update.checking && update.result;
-    if (!found || found.state !== "newer") return [check];
+    if (!found || found.state !== "newer") return [];
     if (found.development) {
-      if (!found.can_pull) return [check];
+      if (!found.can_pull) return [];
       const pull = row("pull-latest", "Pull the latest version", null);
       pull.dataset.id = "pull-latest";
-      return [check, pull];
+      return [pull];
     }
     const news = row("whats-new", "What's new", `Version ${found.version}`);
     news.dataset.id = "whats-new";
-    if (!found.can_update) return [check, news];
+    if (!found.can_update) return [news];
     const install = row("update-restart", "Update and restart", found.download_text || null);
     install.dataset.id = "update-restart";
-    return [check, news, install];
+    return [news, install];
+  }
+
+  // Try a branch, then Back to main while on a branch, then Restore data
+  // once a switch has backed it up. Development copies only.
+  function branchRows() {
+    const state = data.updates.branches;
+    if (!state) return [];
+    const tryRow = row("try-branch", "Try a branch", TRY_META);
+    tryRow.dataset.id = "try-branch";
+    const status = document.createElement("span");
+    status.className = "en-row__meta";
+    status.dataset.role = "branch-status";
+    status.setAttribute("role", "status");
+    status.setAttribute("aria-live", "polite");
+    status.textContent = branches.listing ? LISTING : branches.text;
+    status.hidden = !status.textContent;
+    tryRow.append(status);
+    const list = [tryRow];
+    if (state.on) {
+      const where = state.on.label === state.on.branch ? state.on.branch : `${state.on.label} (${state.on.branch})`;
+      const main = row("back-to-main", "Back to main", `Now on ${where}`);
+      main.dataset.id = "back-to-main";
+      list.push(main);
+    }
+    if (state.restore) {
+      const restore = row("restore-data", "Restore data from before the last switch", state.restore.text);
+      restore.dataset.id = "restore-data";
+      list.push(restore);
+    }
+    return list;
   }
 
   // The rows in the list, in order, after the update rows changed.
@@ -296,13 +344,82 @@ export function createSettings({ keyboard, onboarding, onHints, onClose, onFolde
   function confirmUpdate(item) {
     const found = update.result;
     const pull = item.dataset.kind === "pull-latest";
-    confirmEl.dataset.action = pull ? "pull" : "update";
-    confirmEl.dataset.version = pull ? "" : found.version;
-    confirmEl.querySelector('[data-role="question"]').textContent = pull
+    ask(item, pull ? "pull" : "update", pull ? "" : found.version, pull
       ? "Pull the latest version? Kettle Video will restart."
-      : `Update to ${found.version}? Kettle Video will restart.`;
-    confirmEl.querySelector('[data-role="action"]').textContent = pull ? "Pull and restart" : "Update and restart";
-    window.EnamelUI.picker.open(confirmEl, item);
+      : `Update to ${found.version}? Kettle Video will restart.`, pull ? "Pull and restart" : "Update and restart");
+  }
+
+  // The same confirm for every action: what, its one value, the question
+  // and the action row's words.
+  function ask(opener, action, value, question, words) {
+    confirmEl.dataset.action = action;
+    confirmEl.dataset.version = value;
+    confirmEl.querySelector('[data-role="question"]').textContent = question;
+    confirmEl.querySelector('[data-role="action"]').textContent = words;
+    window.EnamelUI.picker.open(confirmEl, opener);
+  }
+
+  function tryRowEl() {
+    return updatesEl.querySelector('[data-id="try-branch"]');
+  }
+
+  // Try a branch: the one time it goes online, only when chosen. While it
+  // lists, the row says so and nothing else waits for it.
+  async function listBranches() {
+    if (branches.listing) return;
+    branches.listing = true;
+    branches.text = "";
+    refreshUpdates();
+    let answer;
+    try {
+      answer = await api.listBranches();
+    } catch (err) {
+      answer = { ok: false, text: LIST_FAILED };
+    }
+    branches.listing = false;
+    branches.text = answer.ok ? (answer.titles ? "" : NO_TITLES) : answer.text || LIST_FAILED;
+    refreshUpdates();
+    if (!answer.ok || !open || view !== "list" || updating) return;
+    const cancel = document.createElement("button");
+    branchRowsEl.replaceChildren(...answer.branches.map((branch) => {
+      const item = document.createElement("button");
+      item.type = "button";
+      item.className = "en-picker__row";
+      item.tabIndex = -1;
+      item.value = branch.branch;
+      item.dataset.kind = "branch";
+      item.dataset.label = branch.label;
+      if (branch.current) item.setAttribute("aria-current", "true");
+      addSpan(item, "", branch.label);
+      if (branch.desc) addSpan(item, "en-picker__desc", branch.desc);
+      return item;
+    }), cancel);
+    cancel.type = "button";
+    cancel.className = "en-picker__row en-picker__cancel";
+    cancel.tabIndex = -1;
+    cancel.value = "cancel";
+    cancel.dataset.kind = "branch-cancel";
+    addSpan(cancel, "", "Cancel");
+    window.EnamelUI.picker.open(branchPickerEl, tryRowEl() || document.activeElement);
+  }
+
+  // A branch chosen: the confirm says what happens, then its yes starts it.
+  branchPickerEl.addEventListener("en-select", (event) => {
+    const item = event.detail.row;
+    if (!item || item.dataset.kind !== "branch") return;
+    const label = item.dataset.label;
+    const question = `Switch to ${label}? Kettle Video backs up your data, then restarts on that branch.`;
+    requestAnimationFrame(() => ask(tryRowEl() || item, "switch", item.value, question, "Switch and restart"));
+  });
+
+  function confirmBackToMain(item) {
+    ask(item, "main", "", "Go back to main? Kettle Video backs up your data, then restarts on main.",
+      "Back to main and restart");
+  }
+
+  function confirmRestore(item) {
+    const restore = data.updates.branches.restore;
+    ask(item, "restore", restore.id, restore.question, "Restore and restart");
   }
 
   const wait = (ms) => new Promise((done) => setTimeout(done, ms));
@@ -313,7 +430,14 @@ export function createSettings({ keyboard, onboarding, onHints, onClose, onFolde
     if (updating || keyboard.isBusy()) return;
     let answer;
     try {
-      answer = action === "pull" ? await api.startPull() : await api.startUpdate(version);
+      const starts = {
+        pull: () => api.startPull(),
+        update: () => api.startUpdate(version),
+        switch: () => api.switchBranch(version),
+        main: () => api.backToMain(),
+        restore: () => api.restoreData(version),
+      };
+      answer = await starts[action]();
     } catch (err) {
       answer = { ok: false, text: UPDATE_FAILED };
     }
@@ -343,7 +467,7 @@ export function createSettings({ keyboard, onboarding, onHints, onClose, onFolde
         window.location.reload();
         return;
       }
-      if (["downloading", "installing", "pulling", "restarting"].includes(status.state)) {
+      if (status.running) {
         const cancelable = status.state === "downloading";
         if (cancelable !== updating.cancelable) {
           updating.cancelable = cancelable;
@@ -370,6 +494,9 @@ export function createSettings({ keyboard, onboarding, onHints, onClose, onFolde
     else if (item.dataset.kind === "update-check") checkForUpdates();
     else if (item.dataset.kind === "whats-new") showWhatsNew();
     else if (item.dataset.kind === "update-restart" || item.dataset.kind === "pull-latest") confirmUpdate(item);
+    else if (item.dataset.kind === "try-branch") listBranches();
+    else if (item.dataset.kind === "back-to-main") confirmBackToMain(item);
+    else if (item.dataset.kind === "restore-data") confirmRestore(item);
     else showLicence(data.credits.find((credit) => credit.id === item.dataset.id));
   }
 

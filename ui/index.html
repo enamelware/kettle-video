@@ -134,6 +134,17 @@
     </div>
   </dialog>
 
+  <!-- Try a branch (the "Try a branch" work), from Settings on a development
+       copy: an Enamel picker, action-list use, the branch the copy is on
+       marked current. The app writes its rows each time it opens: branches
+       with an open pull request first ("#40 · title", the branch under it),
+       then the other branches, then Cancel. -->
+  <dialog id="branch-picker" class="branch-picker en-dialog" tabindex="-1">
+    <div class="en-picker">
+      <div class="en-picker__rows" data-role="rows"></div>
+    </div>
+  </dialog>
+
   <!-- Home's menu (the Home actions work): an Enamel picker, action-list use. The
        app writes its rows each time it opens: Rescan library, Remove N
        missing items (only when there are some), Quit, then Cancel. -->

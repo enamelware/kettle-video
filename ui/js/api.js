@@ -122,7 +122,26 @@ export function cancelUpdate() {
   return postUpdate("/api/updates/cancel", {});
 }
 
-// { state, text, boot }: boot changes once the restarted server answers.
+// Try a branch (the "Try a branch" work), development copies only. The list
+// goes online, only when the viewer chooses the row: { ok, branches, titles }
+// or { ok: false, text }. The others start like Pull, after the viewer's yes.
+export async function listBranches() {
+  return postUpdate("/api/branches/list", {});
+}
+
+export function switchBranch(branch) {
+  return postUpdate("/api/branches/switch", { branch });
+}
+
+export function backToMain() {
+  return postUpdate("/api/branches/main", {});
+}
+
+export function restoreData(id) {
+  return postUpdate("/api/branches/restore", { id });
+}
+
+// { state, text, running, boot }: boot changes once the restarted server answers.
 export async function getUpdateStatus() {
   const res = await fetch("/api/updates/status", { cache: "no-store" });
   if (!res.ok) throw new Error(`update status failed: ${res.status}`);
