@@ -10,7 +10,7 @@ archive's checksum and the release's notes:
 
     TAG       a release tag, v<VERSION>: the tag's own VERSION file must say
               the same version (v0.1.0-dev for VERSION 0.1.0-dev)
-    --out     where the four files go (default: dist/ in the repo, which
+    --out     where the five files go (default: dist/ in the repo, which
               git ignores)
     --repo    the git repo to read the tag from (default: this one)
     --list    the privacy guard's word list (default: the guard's own)
@@ -29,6 +29,11 @@ names):
                                              installer/update.py (the installer's update step)
                                              written in, so it works on its
                                              own next to the archive
+    install-<ARCHIVE_NAME>.desktop           the one-file installer (the one-file
+                                             install work): a desktop launcher
+                                             holding the tag's
+                                             installer/one_file_install.py, with
+                                             names.env's lines written in
 
 Privacy: everything is read from the tag's tracked files with git, never
 from the working folder, so nothing that only exists on this device
@@ -36,7 +41,8 @@ from the working folder, so nothing that only exists on this device
 app's own folders and files are taken (INCLUDED below); tests, spikes,
 tools, scripts, docs and Claude Code's files stay out. The release check
 (tools/release_check.py, the release check work, which includes the privacy guard) then
-checks every file in the archive, the notes and install.sh; if it finds
+checks every file in the archive, the notes, install.sh and the
+launcher; if it finds
 anything, or the privacy guard's list is missing, nothing is written. The
 whole repo gets the same check as a release step of its own
 (docs/dev-environment.md, "Release check").
@@ -49,6 +55,7 @@ GitHub release.
 from __future__ import annotations
 
 import argparse
+import ast
 import gzip
 import hashlib
 import io
@@ -83,6 +90,12 @@ NAMES_END = "# --- end names ---"
 UPDATE_START = "# --- update logic ---"
 UPDATE_END = "# --- end update logic ---"
 UPDATE_DELIMITER = "KETTLE_VIDEO_UPDATE_PY"
+# The one-file installer the release writes into a desktop launcher (the
+# one-file install work).
+ONE_FILE = "installer/one_file_install.py"
+# Characters a quoted Exec value can't hold without escapes (the desktop
+# entry spec); the launcher's start-up line never needs them.
+EXEC_UNSAFE = set('"`$\\%\n')
 
 # What the archive holds: the app, what it runs on, and its licences.
 INCLUDED_FILES = {"LICENSE", "THIRD_PARTY_LICENSES.md", "README.md", "VERSION",
@@ -163,6 +176,68 @@ def sha256_line(data, filename):
     return f"{hashlib.sha256(data).hexdigest()}  {filename}\n"
 
 
+def _literal(source, name):
+    """The string a module-level `name = ...` assigns in source, or None."""
+    try:
+        tree = ast.parse(source)
+    except SyntaxError:
+        return None
+    for node in tree.body:
+        if isinstance(node, ast.Assign) and any(
+                isinstance(target, ast.Name) and target.id == name for target in node.targets):
+            try:
+                value = ast.literal_eval(node.value)
+            except ValueError:
+                return None
+            return value if isinstance(value, str) else None
+    return None
+
+
+def launcher_name(names):
+    return f"install-{names['ARCHIVE_NAME']}.desktop"
+
+
+def desktop_launcher(source, names_text, names):
+    """The one-file installer as a desktop launcher (the one-file install
+    work): a desktop entry whose Exec line runs the program held in the
+    comment lines after its marker, with names.env's lines written into
+    the program's names block. None if the source can't be written in
+    safely."""
+    if "\r" in source or "\0" in source:
+        return None
+    values = [line.strip() + "\n" for line in names_text.splitlines()
+              if line.strip() and not line.strip().startswith("#") and "=" in line]
+    program = _replace_block(source, NAMES_START, NAMES_END,
+                             ["# Written in by tools/release.py from installer/names.env.\n",
+                              *values])
+    if program is None:
+        return None
+    try:
+        compile(program, ONE_FILE, "exec")
+    except SyntaxError:
+        return None
+    bootstrap, marker = _literal(source, "BOOTSTRAP"), _literal(source, "MARKER")
+    if not bootstrap or not marker or EXEC_UNSAFE & set(bootstrap) or marker not in bootstrap:
+        return None
+    app = names["APP_NAME"]
+    head = [
+        "[Desktop Entry]",
+        "Type=Application",
+        f"Name=Install {app}",
+        f"Comment=Downloads the latest {app} from its GitHub releases and installs it "
+        "in your home folder",
+        "Icon=system-software-install",
+        "Terminal=false",
+        f'Exec=python3 -I -c "{bootstrap}" %k',
+        "",
+        f"# This file installs {app}. Double-click it in Desktop Mode.",
+        "# The program it runs is below, as comment lines; Exec reads them from here.",
+        marker,
+    ]
+    body = ["# " + line if line else "#" for line in program.splitlines()]
+    return "\n".join(head + body) + "\n"
+
+
 # ---------------------------------------------------------------- git
 
 def _git(repo, *args):
@@ -206,7 +281,8 @@ def tag_files(repo, tag):
 
 def plan(repo, tag):
     """Check the tag and read what the release needs from it. Returns
-    (version, names, notes, installer). Raises ReleaseProblem in plain words."""
+    (version, names, notes, installer, launcher). Raises ReleaseProblem in
+    plain words."""
     if not _tag_exists(repo, tag):
         raise ReleaseProblem(f"There is no tag called {tag}. Make the release tag "
                              "first (v followed by the version in VERSION).")
@@ -248,7 +324,14 @@ def plan(repo, tag):
         raise ReleaseProblem(f"The tag {tag} has no usable {INSTALLER} (it needs its "
                              f"'{NAMES_START}' and '{UPDATE_START}' blocks), so there is "
                              "nothing to install with.")
-    return version, names, notes, installer
+    one_file = _tag_file(repo, tag, ONE_FILE)
+    launcher = (desktop_launcher(one_file, names_text, names)
+                if one_file is not None else None)
+    if launcher is None:
+        raise ReleaseProblem(f"The tag {tag} has no usable {ONE_FILE} (it needs its "
+                             f"'{NAMES_START}' block, its MARKER and its BOOTSTRAP), so "
+                             "there is no one-file installer to attach.")
+    return version, names, notes, installer, launcher
 
 
 def build_archive(files, prefix):
@@ -268,8 +351,8 @@ def build_archive(files, prefix):
 
 
 def release(tag, out=None, repo=ROOT, list_path=privacy_guard.DEFAULT_LIST):
-    """Build the four files. Returns their paths. Raises ReleaseProblem."""
-    version, names, notes, installer = plan(repo, tag)
+    """Build the five files. Returns their paths. Raises ReleaseProblem."""
+    version, names, notes, installer, launcher = plan(repo, tag)
     files = [f for f in tag_files(repo, tag) if included(f[0])]
     paths = {f[0] for f in files}
     missing = [p for p in REQUIRED_FILES if p not in paths]
@@ -289,6 +372,7 @@ def release(tag, out=None, repo=ROOT, list_path=privacy_guard.DEFAULT_LIST):
              for path, member, data in files]
     items.append(("release notes", notes.encode("utf-8")))
     items.append(("install.sh", installer.encode("utf-8")))
+    items.append((launcher_name(names), launcher.encode("utf-8")))
     titles = _tag_file(repo, tag, release_check.INVENTED_TITLES)
     invented = (release_check.read_titles(titles) if titles is not None
                 else release_check.invented_titles(ROOT))
@@ -315,7 +399,10 @@ def release(tag, out=None, repo=ROOT, list_path=privacy_guard.DEFAULT_LIST):
                           encoding="utf-8")
     installer_path.write_text(installer, encoding="utf-8")
     installer_path.chmod(0o755)
-    return archive_path, sum_path, notes_path, installer_path
+    launcher_path = out / launcher_name(names)
+    launcher_path.write_text(launcher, encoding="utf-8")
+    launcher_path.chmod(0o755)
+    return archive_path, sum_path, notes_path, installer_path, launcher_path
 
 
 def main(argv=None):

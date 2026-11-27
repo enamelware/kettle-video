@@ -16,16 +16,23 @@ Kettle Video is a simple, controller-first way to browse and play the movies and
 
 In Desktop Mode:
 
-1. From the [latest release](https://github.com/enamelware/kettle-video/releases/latest), download three files into one folder (for example Downloads): `install.sh`, `kettle-video-<version>.tar.gz` and `kettle-video-<version>.tar.gz.sha256`.
-2. Open a terminal (Konsole) in that folder and run:
+1. From the [latest release](https://github.com/enamelware/kettle-video/releases/latest), download one file: `install-kettle-video.desktop`.
+2. Open your Downloads folder and double-click it (the file manager may show it as **Install Kettle Video**). It first warns that this is a program it doesn't know yet: choose **Continue** to run it.
+3. Answer its questions. It says where Kettle Video goes and asks before going online, then downloads the latest release from GitHub, checks it, installs Kettle Video in your home folder, adds it to the app menu and checks for mpv. If mpv is missing, it offers to install it from Flathub and asks first.
 
-   ```
-   bash install.sh
-   ```
-
-   It needs no password and never changes the system or Steam's own files. It checks the download first, installs Kettle Video in your home folder, adds it to the app menu and checks for mpv. If mpv is missing, it offers to install it from Flathub and asks first.
+It needs no password and never changes the system or Steam's own files. If anything goes wrong (no connection, GitHub can't be reached, or the download doesn't match its checksum), it says so and nothing is installed. Opened again on a device that already has Kettle Video, it says which version you have and which it will install; your library, settings and Continue watching are kept.
 
 On the first launch Kettle Video checks for mpv, asks for your Movies and TV Shows folders, then reads them and shows what it found.
+
+### Other ways to install
+
+Without a connection on the device, or if you prefer a terminal: from the same release, download three files into one folder (for example Downloads): `install.sh`, `kettle-video-<version>.tar.gz` and `kettle-video-<version>.tar.gz.sha256`. Open a terminal (Konsole) in that folder and run:
+
+```
+bash install.sh
+```
+
+It does the same steps: it checks the download first, installs Kettle Video, adds it to the app menu and checks for mpv.
 
 ## Adding it to Steam
 
@@ -98,6 +105,7 @@ Kettle Video collects nothing and never goes online by itself. The only time it 
 
 - On a development copy (a git folder), the same two actions ask that copy's own git remote instead: **Check for updates** reads its latest version and **Pull the latest version** downloads it. git connects with its own settings, including any sign-in you have set up for that remote, so the remote can see which account is asking.
 - The window Kettle Video opens in has a Firefox profile of its own, with Firefox's own updates, telemetry and other online features switched off. An installed copy and a development copy each have their own.
+- The one-file installer (`install-kettle-video.desktop`) goes online only after you open it and say yes: it asks GitHub for the latest release and downloads it from this project's GitHub releases, which shows GitHub your IP address. It sends nothing about you.
 - The installer goes online only if mpv is missing and you say yes to installing it from Flathub.
 
 Any future feature that needs the network will only run when you choose it, and this section will say so first.

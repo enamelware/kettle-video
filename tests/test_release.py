@@ -18,6 +18,8 @@ Run: scripts/test.sh unit tests.test_release
 import hashlib
 import io
 import os
+import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -31,6 +33,7 @@ SCRIPT = ROOT / "tools" / "release.py"
 NAMES = ROOT / "installer" / "names.env"
 INSTALLER = ROOT / "installer" / "install.sh"
 UPDATER = ROOT / "installer" / "update.py"
+ONE_FILE = ROOT / "installer" / "one_file_install.py"
 sys.path.insert(0, str(ROOT / "tools"))
 import release  # noqa: E402
 
@@ -82,6 +85,7 @@ class ReleaseTestCase(unittest.TestCase):
             "installer/names.env": NAMES.read_text(encoding="utf-8"),
             "installer/install.sh": INSTALLER.read_text(encoding="utf-8"),
             "installer/update.py": UPDATER.read_text(encoding="utf-8"),
+            "installer/one_file_install.py": ONE_FILE.read_text(encoding="utf-8"),
             "launch.sh": "#!/bin/sh\necho launch\n",
             "settings.example.json": "{}\n",
             "backend/app.py": "print('tagged')\n",
@@ -153,7 +157,53 @@ class BuildsTheRelease(ReleaseTestCase):
     def test_writes_the_archive_its_checksum_and_the_notes(self):
         self.assertEqual(self.written(), sorted([
             f"{self.stem()}.tar.gz", f"{self.stem()}.tar.gz.sha256",
-            f"{self.stem()}-notes.md", "install.sh"]))
+            f"{self.stem()}-notes.md", "install.sh", self.launcher_name()]))
+
+    def launcher_name(self):
+        return release.launcher_name(release.read_names(NAMES.read_text(encoding="utf-8")))
+
+    def test_the_one_file_installer_is_a_desktop_launcher(self):
+        # The one-file install work: one desktop entry, its Exec line running
+        # the tagged program held in its comment lines, names written in.
+        text = Path(self.out, self.launcher_name()).read_text(encoding="utf-8")
+        names = release.read_names(NAMES.read_text(encoding="utf-8"))
+        lines = text.splitlines()
+        self.assertEqual(lines[0], "[Desktop Entry]")
+        self.assertIn(f"Name=Install {names['APP_NAME']}", lines)
+        self.assertIn("Type=Application", lines)
+        execs = [line for line in lines if line.startswith("Exec=")]
+        self.assertEqual(len(execs), 1)
+        self.assertTrue(execs[0].endswith('" %k'))
+        # Every line after the header is a comment, so the entry stays valid.
+        body = lines[lines.index(""):]
+        self.assertTrue(all(not line or line.startswith("#") for line in body))
+        marker = body.index("## --- one-file installer ---")
+        program = "\n".join(line[2:] for line in body[marker + 1:])
+        for key in release.NAME_KEYS:
+            self.assertIn(f'{key}="{names[key]}"', program)
+        # Apart from the names, exactly the tagged program.
+        def without_names(code):
+            return re.sub(r"# --- names ---\n.*?# --- end names ---\n", "", code, flags=re.S)
+        self.assertEqual(without_names(program + "\n"),
+                         without_names(ONE_FILE.read_text(encoding="utf-8")))
+
+    def test_the_launcher_starts_and_asks_before_going_online(self):
+        launcher = Path(self.out, self.launcher_name())
+        command = next(line for line in launcher.read_text(encoding="utf-8").splitlines()
+                       if line.startswith("Exec="))[len("Exec="):]
+        argv = shlex.split(command.replace("%k", shlex.quote(str(launcher))))
+        home = Path(self.tmp, "home")
+        home.mkdir()
+        result = subprocess.run(argv, input="n\n\n", capture_output=True, text=True,
+                                timeout=60, env={"HOME": str(home), "PATH": os.environ["PATH"],
+                                                 "KETTLE_VIDEO_IN_TERMINAL": "1"})
+        self.assertEqual(result.returncode, 3, result.stdout + result.stderr)
+        self.assertIn("asks GitHub for the latest release", result.stdout)
+        self.assertEqual(list(home.iterdir()), [])
+        if shutil.which("desktop-file-validate"):
+            checked = subprocess.run(["desktop-file-validate", str(launcher)],
+                                     capture_output=True, text=True)
+            self.assertEqual(checked.returncode, 0, checked.stdout + checked.stderr)
 
     def test_install_sh_stands_on_its_own_next_to_the_archive(self):
         # The installer work: the names are written into the script, so it needs no
@@ -272,6 +322,22 @@ class StopsPlainly(ReleaseTestCase):
         self.write("CHANGELOG.md", "## 0.3.0\n\n- Invented.\n\n" + CHANGELOG)
         self.commit_and_tag("v0.3.0")
         self.assert_stops(self.run_release("v0.3.0"), "installer/install.sh")
+
+    def test_a_missing_one_file_installer(self):
+        # The one-file install work: every release gets the one-file installer.
+        git(self.repo, "rm", "-q", "installer/one_file_install.py")
+        self.write("VERSION", "0.3.0\n")
+        self.write("CHANGELOG.md", "## 0.3.0\n\n- Invented.\n\n" + CHANGELOG)
+        self.commit_and_tag("v0.3.0")
+        self.assert_stops(self.run_release("v0.3.0"), "installer/one_file_install.py")
+
+    def test_a_one_file_installer_without_its_names_block(self):
+        text = ONE_FILE.read_text(encoding="utf-8").replace("# --- end names ---\n", "")
+        self.write("installer/one_file_install.py", text)
+        self.write("VERSION", "0.3.0\n")
+        self.write("CHANGELOG.md", "## 0.3.0\n\n- Invented.\n\n" + CHANGELOG)
+        self.commit_and_tag("v0.3.0")
+        self.assert_stops(self.run_release("v0.3.0"), "installer/one_file_install.py")
 
     def test_a_missing_update_step(self):
         # The installer's update step: install.sh carries the shared update step with it.

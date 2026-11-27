@@ -6,14 +6,15 @@
 The Privacy section is a promise: Kettle Video never goes online by itself,
 and the only connections are the actions the viewer chooses in Settings ›
 About (Check for updates, then Update and restart; on a development copy,
-the same check and Pull the latest version through git) and the
-installer's Flathub step for mpv, after a yes.
+the same check and Pull the latest version through git), the one-file
+installer once the viewer opens it and says yes, and the installer's
+Flathub step for mpv, after a yes.
 
 These tests read the code itself, so they fail the moment that changes:
 
   - every way online in the code that runs with the app (the backend, the
-    vendored Python libraries, the installer's shared update step,
-    launch.sh, the pages, mpv's scripts and options) is on one short list,
+    vendored Python libraries, the installer's shared update step, the
+    one-file installer, launch.sh, the pages, mpv's scripts and options) is on one short list,
     each entry naming the Privacy section's words for it. A new way online
     anywhere else fails here, and so does one added to a listed file;
   - the server reaches those actions only from the viewer's own requests
@@ -66,6 +67,17 @@ ALLOWED = {
         "promise": ["Update and restart", "downloads the new version from GitHub",
                     "Pull the latest version"],
     },
+    # The one-file installer (the one-file install work): after the viewer
+    # opens it and says yes, GitHub's latest release and its two files from
+    # this app's releases (tests/test_one_file_install.py checks the order).
+    # socket only for its error types.
+    "installer/one_file_install.py": {
+        "markers": {"import urllib.request", "import socket", "url api.github.com",
+                    "url github.com"},
+        "promise": ["The one-file installer", "goes online only after you open it and say yes",
+                    "asks GitHub for the latest release and downloads it from this "
+                    "project's GitHub releases"],
+    },
 }
 # Files with network modules that may talk to this device only: checked
 # below that every address in them is this device's.
@@ -84,6 +96,7 @@ def _python_files():
             if "__pycache__" not in path.parts:
                 yield path
     yield REPO / "installer" / "update.py"
+    yield REPO / "installer" / "one_file_install.py"
 
 
 def _docstrings(tree) -> set:
@@ -277,9 +290,13 @@ class ThePrivacySection(unittest.TestCase):
         runs = [line for line in install.splitlines()
                 if re.search(r"\b(curl|wget|git)\b|flatpak (install|remote-add)", line)
                 and not line.strip().startswith(("say", "#", "MPV_COMMAND="))]
-        self.assertEqual([line.strip() for line in runs], ['if flatpak install flathub "$MPV_FLATPAK"; then'])
-        before = install[:install.index('if flatpak install flathub "$MPV_FLATPAK"; then')]
-        self.assertIn("Install mpv now with that command? [y/N]", before[-600:])
+        run = 'if flatpak install $FLATPAK_ASK flathub "$MPV_FLATPAK"; then'
+        self.assertEqual([line.strip() for line in runs], [run])
+        before = install[:install.index(run)]
+        # Asked on the terminal, or in the one-file installer's window, which
+        # shows the same command (KETTLE_VIDEO_MPV_ANSWER).
+        self.assertIn("Install mpv now with that command? [y/N]", before[-900:])
+        self.assertIn('answer="$KETTLE_VIDEO_MPV_ANSWER"', before[-900:])
         self.assertIn("y|Y|yes|Yes|YES)", before[-200:])
         self.assertNotRegex((REPO / "installer" / "uninstall.sh").read_text(encoding="utf-8"),
                             r"\b(curl|wget)\b|flatpak install|git (fetch|pull|clone)")

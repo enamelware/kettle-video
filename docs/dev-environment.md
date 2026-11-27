@@ -73,7 +73,7 @@ This writes a `kettle-video-dev.desktop` entry to `~/.local/share/applications/`
 
 ### Updating by running the installer again
 
-Running the installer again always works, also when Update and restart isn't offered: put the newer release's `install.sh`, archive and `.sha256` file in one folder and run `bash install.sh` there. Both ways use the same steps:
+Running the installer again always works, also when Update and restart isn't offered: double-click the release's `install-kettle-video.desktop`, or put the newer release's `install.sh`, archive and `.sha256` file in one folder and run `bash install.sh` there. All the ways use the same steps:
 
 - It finds the installed copy, prints the version you have and the one in the archive, and replaces only the app files. Your library, settings, resume positions, Continue watching and logs are never touched.
 - The archive is checked against its checksum before anything changes.
@@ -134,7 +134,7 @@ The repo works on any Linux machine with Python 3.10 or later; the Steam Deck an
 
 ### Release archive
 
-`python3 tools/release.py v<VERSION>` (the release script work) builds a release from its tag into `dist/` (git ignores it), four files: the archive the installer installs, its `.sha256` checksum, release notes taken from the version's entry in `CHANGELOG.md`, and `install.sh`, the tag's `installer/install.sh` with `installer/names.env`'s lines and `installer/update.py` written in, so it works on its own next to the archive (the installer work, the installer's update step). It reads only the tag's tracked files, takes only the app and its licence files, and runs the release check (below, which includes the privacy guard) over everything it writes; a tag that doesn't match its `VERSION`, or a missing CHANGELOG entry, stops it with a plain message. Every installer name lives in `installer/names.env`, and a release whose `names.env` is missing one stops (the installer review fixes). Reasons: `docs/decisions.md`.
+`python3 tools/release.py v<VERSION>` (the release script work) builds a release from its tag into `dist/` (git ignores it), five files: the archive the installer installs, its `.sha256` checksum, release notes taken from the version's entry in `CHANGELOG.md`, `install.sh`, the tag's `installer/install.sh` with `installer/names.env`'s lines and `installer/update.py` written in, so it works on its own next to the archive (the installer work, the installer's update step), and `install-kettle-video.desktop`, the one-file installer: the tag's `installer/one_file_install.py` with the names written in, as a desktop launcher (the one-file install work, `docs/spec.md`, "Installing with one file"). Attach all of them except the notes to the GitHub release. It reads only the tag's tracked files, takes only the app and its licence files, and runs the release check (below, which includes the privacy guard) over everything it writes; a tag that doesn't match its `VERSION`, or a missing CHANGELOG entry, stops it with a plain message. Every installer name lives in `installer/names.env`, and a release whose `names.env` is missing one stops (the installer review fixes). Reasons: `docs/decisions.md`.
 
 ### Commit identity
 

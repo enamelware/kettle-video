@@ -204,13 +204,23 @@ else
     MPV_STATE="no-flatpak"
     say "Flatpak isn't on this system, so mpv can't be installed from here."
   else
-    printf 'Install mpv now with that command? [y/N] '
     answer=""
-    read -r answer || answer=""
+    FLATPAK_ASK=""
+    if [ -n "${KETTLE_VIDEO_MPV_ANSWER:-}" ]; then
+      # The one-file installer (installer/one_file_install.py) asked this in
+      # its own window already, showing the same command; Flatpak's own
+      # questions then take their usual answers.
+      answer="$KETTLE_VIDEO_MPV_ANSWER"
+      FLATPAK_ASK="--assumeyes"
+      say "Install mpv now with that command? $answer (answered in the window)"
+    else
+      printf 'Install mpv now with that command? [y/N] '
+      read -r answer || answer=""
+    fi
     say ""
     case "$answer" in
       y|Y|yes|Yes|YES)
-        if flatpak install flathub "$MPV_FLATPAK"; then
+        if flatpak install $FLATPAK_ASK flathub "$MPV_FLATPAK"; then
           MPV_STATE="installed"
           say "mpv is installed."
         else

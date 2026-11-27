@@ -1356,3 +1356,18 @@ A minimal Settings screen, from Home's menu: change the Movies and TV Shows fold
 **Decision (the designer's):** the rehearsal uses real releases. v1.0.1 holds the fixes for the power button during playback and for each copy keeping its own data; the update step goes from v1.0.0 to v1.0.1, and the other steps use v1.0.1. A problem the rehearsal finds is fixed in a later release such as v1.0.2. No rehearsal release is published, so nothing has to be deleted afterwards.
 
 **Reason:** the latest release on GitHub is always one meant for use, v1.0.0 needed its two fixes released anyway, and the update step tests the update a v1.0.0 user makes.
+
+## 2026-11-27 — One-file install: a desktop launcher that runs the installer from the checked archive (the one-file install work)
+
+**What:** every release carries `install-kettle-video.desktop`. Double-clicked in Desktop Mode, it asks, then downloads the latest full release from GitHub, checks its checksum and runs the `install.sh` from inside the checked archive. The three-file way stays.
+
+- **Format: a desktop launcher.** It is the only file the file manager runs on a double-click; a `.sh` or `.py` opens in the text editor unless the viewer first marks it executable in its properties. The first double-click shows the file manager's warning about a program it doesn't know yet, with **Continue**. The program lives in the launcher's comment lines, so the launcher stays one readable text file and the entry stays valid; `Exec=` reads them with `python3 -I` (the file's own path is `%k`).
+- **The installer comes from inside the checked archive**, not as a separate download: the release's checksum covers only the archive, so a downloaded `install.sh` would run unchecked. Taking it from the archive after the check also keeps the install steps written once.
+- **File name:** `install-kettle-video.desktop`, without spaces, since GitHub replaces spaces in a release file's name with dots. The file manager shows its `Name=`, "Install Kettle Video".
+- **GitHub's download server:** the downloads follow GitHub's hand-over from the release address to its own download server (`objects.githubusercontent.com`), as Update and restart already does; no other address is contacted. GitHub serves every release file from there, so a release can't be downloaded without it.
+- **Questions in a window:** `install.sh`'s two questions read the terminal, so in a window they are asked first and handed over (the older-version answer on its input, the mpv answer as `KETTLE_VIDEO_MPV_ANSWER`, with Flatpak's own questions answered yes, since the window showed the command). zenity first, as for the start-up message.
+
+**Reason:** the issue asks for one download and a double-click, with the checksum still checked, nothing online until the viewer starts it, and the current way kept.
+
+**Nova risk:** the warning, the double-click and the dialog tool are the desktop's own; if Armada's file manager doesn't run desktop launchers on a double-click, this needs another format.
+
