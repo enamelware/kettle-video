@@ -189,12 +189,17 @@ class TheList(DevelopmentCopy):
         self.assertTrue(answer["titles"])
         rows = [(r["branch"], r["label"], r["desc"], r["pull"]) for r in answer["branches"]]
         self.assertEqual(rows, [
-            ("issue-42", "#42 · Invented season picker", "issue-42", True),
-            ("issue-40", "#40 · Movies detail screen", "issue-40", True),
+            ("issue-42", "#42 · Invented season picker", None, True),
+            ("issue-40", "#40 · Movies detail screen", None, True),
             ("tidy-words", "tidy-words", None, False),
         ])
         self.assertEqual(self.pull_calls, ["0.2.0-dev"])
         self.assertEqual(self.branch(), "main")
+
+    def test_a_pull_request_branch_not_named_after_its_issue_keeps_its_name_under_the_title(self):
+        rows = try_branch.picker_list(["main", "tidy-words"],
+                                      [{"branch": "tidy-words", "number": 44, "title": "Invented tidy-up"}], "main")
+        self.assertEqual([(r["label"], r["desc"]) for r in rows], [("#44 · Invented tidy-up", "tidy-words")])
 
     def test_without_the_pull_request_list_the_branches_are_still_listed(self):
         self.pulls = update_check.CheckFailed("GitHub answered 403")

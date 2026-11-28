@@ -63,13 +63,14 @@ from tests.kiosk_profile_check import launch_user_js  # noqa: E402
 from tests.loading_screen_check import UI_DIR, Marionette, free_port  # noqa: E402
 from tests.window_sizes import FIREFOX_FLAG, SIZES, WINDOW, set_window  # noqa: E402
 
-UP, DOWN = "", ""
+UP, DOWN = "", ""  # WebDriver's arrow keys
 SPACE, B, START = " ", "q", "m"
 PULLS = [{"branch": "issue-40", "number": 41, "title": "Movies detail screen"},
          {"branch": "issue-42", "number": 43, "title": "Invented season picker"}]
 BRANCHES = ["main", "issue-40", "issue-42", "tidy-words"]
 
-STATE_JS = UPDATE_STATE_JS.replace("return {", """
+_HEAD, _, _TAIL = UPDATE_STATE_JS.rpartition("\nreturn {")
+STATE_JS = _HEAD + "\n" + ("return {" + _TAIL).replace("return {", """
 const picker = document.getElementById('branch-picker');
 const pickerActive = active && picker.contains(active) ? active : null;
 const pickerCut = [...picker.querySelectorAll('*')].filter(e => visible(e))
@@ -228,7 +229,7 @@ def run(env, profile, shots_dir, check):
 
             s = press(m, SPACE, lambda s: s["pickerOpen"] and s["pickerFocused"], 10)
             check("A lists: open pull requests first, with issue number and title, then the others, then Cancel",
-                  s["pickerRows"] == ["#42 · Invented season picker / issue-42", "#40 · Movies detail screen / issue-40",
+                  s["pickerRows"] == ["#42 · Invented season picker", "#40 · Movies detail screen",
                                       "tidy-words", "Cancel"], s["pickerRows"])
             check("it went online once, on the viewer's choice", (copy["online"], copy["pull_calls"]) == (1, 1), copy)
             s = press(m, B, lambda s: not s["pickerOpen"] and s["activeKind"] == "try-branch")

@@ -208,7 +208,8 @@ def _plain_title(title: str, number: int) -> str:
 
 def picker_list(branches: list, pulls: Optional[list], current: Optional[str]) -> list:
     """The picker's rows: branches with an open pull request first (newest
-    first), as "#N · title" with the branch under it, then the others by
+    first), as "#N · title" with the branch under it (unless it is just
+    issue-N), then the others by
     name. main is left out ("Back to main" is its own row). The branch the
     copy is on is marked current."""
     on_remote = set(branches)
@@ -219,8 +220,11 @@ def picker_list(branches: list, pulls: Optional[list], current: Optional[str]) -
     rows = []
     for branch, pull in sorted(by_branch.items(), key=lambda item: -item[1]["number"]):
         number = issue_number(branch) or pull["number"]
+        # The branch under the title, unless it only repeats the number
+        # (issue-40 under "#40 · …"): a shorter row fits the smallest window.
+        desc = None if branch == f"issue-{number}" else branch
         rows.append({"branch": branch, "label": f"#{number} · {_plain_title(pull['title'], pull['number'])}",
-                     "desc": branch, "pull": True})
+                     "desc": desc, "pull": True})
     for branch in sorted(b for b in on_remote if b not in by_branch and b != MAIN):
         rows.append({"branch": branch, "label": branch, "desc": None, "pull": False})
     for row in rows:
