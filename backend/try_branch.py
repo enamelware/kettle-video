@@ -91,6 +91,8 @@ ALREADY_ON_MAIN = "Already on main."
 NO_MAIN = "This copy has no main to go back to. Nothing was changed."
 NO_BACKUP = "There is no backup to restore."
 RESTORE_FAILED = "Couldn't put your data back. It is as it was before you chose Restore."
+BACK_ON_MAIN_AT_START = "Back on main, with your data backed up. Close this, then start Kettle Video again."
+BACK_AT_START_FAILED = "Couldn't go back to main. Nothing was changed."
 MONTHS = update_check.MONTHS
 
 
@@ -221,12 +223,12 @@ def picker_list(branches: list, pulls: Optional[list], current: Optional[str]) -
     for branch, pull in sorted(by_branch.items(), key=lambda item: -item[1]["number"]):
         number = issue_number(branch) or pull["number"]
         # The branch under the title, unless it only repeats the number
-        # (issue-40 under "#40 · …"): a shorter row fits the smallest window.
+        # (issue-40 under "#N · …"): a shorter row fits the smallest window.
         desc = None if branch == f"issue-{number}" else branch
         rows.append({"branch": branch, "label": f"#{number} · {_plain_title(pull['title'], pull['number'])}",
-                     "desc": desc, "pull": True})
+                     "desc": desc, "open_pull": True})
     for branch in sorted(b for b in on_remote if b not in by_branch and b != MAIN):
-        rows.append({"branch": branch, "label": branch, "desc": None, "pull": False})
+        rows.append({"branch": branch, "label": branch, "desc": None, "open_pull": False})
     for row in rows:
         row["current"] = row["branch"] == current
     return rows
@@ -286,6 +288,35 @@ def switch_to(root: Path, git: Callable, branch: str, start: Optional[str]) -> N
     done = git(root, args, update_check.TIMEOUT_S)
     if done.returncode != 0:
         raise Refused(SWITCH_LATER)
+
+
+def back_to_main_at_start(root: Path, git: Callable, data_dir: Path, settings_file: Path, media_roots,
+                          environ: Mapping[str, str], now: datetime) -> str:
+    """Back to main from the start-up problem screen, when a branch couldn't
+    start: the same rules as Back to main in Settings (no changes of its
+    own, the data backed up first, never online), done at once. No start
+    check: Kettle Video is started again by hand. The plain words to show;
+    raises Refused with nothing changed."""
+    before_branch = current_branch(root, git)
+    if before_branch == MAIN:
+        raise Refused(ALREADY_ON_MAIN)
+    before = head(root, git)
+    ready(root, git, MAIN, None)
+    if unsafe_data_dir(data_dir, root, media_roots, environ):
+        raise Refused(UNSAFE_DATA)
+    label = next((b["to_label"] for b in list_backups(data_dir)
+                  if before_branch and b.get("to") == before_branch and b.get("to_label")), before_branch)
+    try:
+        backup = make_backup(data_dir, settings_file, {
+            "from": before_branch, "from_label": label, "commit": before, "to": MAIN, "to_label": MAIN}, now)
+    except OSError:
+        raise Refused(BACKUP_FAILED)
+    try:
+        switch_to(root, git, MAIN, None)
+    except Refused:
+        remove_backup(data_dir, backup["id"])
+        raise
+    return BACK_ON_MAIN_AT_START
 
 
 def head(root: Path, git: Callable) -> str:

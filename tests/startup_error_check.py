@@ -13,8 +13,12 @@ supported box to very wide: every line of the message shown, starting with
 "Kettle couldn't start." and ending with the log's name; Close focused (in
 Enamel's focus) and in view, above the hint bar; the hint bar saying A Close
 and B Close; nothing cut off and no sideways scroll; Up reaching the first
-line and Down the last. Then once: Space (A), q (B), Escape, Enter and a tap
-on Close each close it, which ends the message server.
+line and Down the last. Then, at every width, a development copy on a
+branch that couldn't start (the "Try a branch" work, its git a stand-in): the
+line naming the branch, Close focused first, Right to Back to main (in view,
+the hint saying A Back to main), A going back once and saying so with Close
+focused again, B closing. Then once: Space (A), q (B), Escape, Enter and a
+tap on Close each close it, which ends the message server.
 
 Run from the repo root:  python3 tests/startup_error_check.py [screenshot-dir]
 """
@@ -35,23 +39,32 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO))
 
-from backend import startup_error  # noqa: E402
+from unittest import mock  # noqa: E402
+
+from backend import startup_error, try_branch  # noqa: E402
 from tests.click_focus_check import tap  # noqa: E402
 from tests.loading_screen_check import Marionette, free_port  # noqa: E402
 from tests.window_sizes import SIZES, WINDOW, FIREFOX_FLAG, set_window  # noqa: E402
 
+RIGHT = ""  # WebDriver's Right arrow
 KEYS = {"Space (A)": " ", "q (B)": "q", "Escape": "", "Enter": ""}
 
 STATE_JS = """
 const main = document.getElementById('startup-error');
 const lines = [...main.querySelectorAll('[data-role="lines"] p')];
 const button = main.querySelector('[data-kind="close"]');
+const back = main.querySelector('[data-kind="back-to-main"]');
+const status = main.querySelector('[data-role="status"]');
 const bar = document.querySelector('.en-hintbar');
 const r = (el) => { const b = el.getBoundingClientRect(); return [b.left, b.top, b.right, b.bottom]; };
 return {
   lines: lines.map((p) => p.textContent),
   lineRects: lines.map(r),
   focused: document.activeElement === button && button.dataset.focused === 'true',
+  backShown: !back.hidden, back: r(back),
+  backFocused: document.activeElement === back && back.dataset.focused === 'true',
+  status: status.hidden ? null : status.textContent,
+  focusedCount: main.querySelectorAll('[data-focused="true"]').length,
   button: r(button), bar: r(bar), hints: bar.textContent.replace(/\\s+/g, ' ').trim(),
   w: window.innerWidth, h: window.innerHeight,
   scrollW: document.documentElement.scrollWidth,
@@ -143,6 +156,48 @@ def check_size(m, root, label, size, check, shots):
     check(f"{label}: A closes it", server.closed())
 
 
+def check_branch(m, root, label, size, check, shots):
+    """A development copy on a branch that couldn't start: Back to main
+    beside Close (the "Try a branch" work). The git side is a stand-in here; the
+    unit tests (tests/test_try_branch.py) run the real one."""
+    asked = []
+
+    def back_to_main(*args, **kwargs):
+        asked.append(True)
+        return {"ok": True, "text": try_branch.BACK_ON_MAIN_AT_START}
+
+    with mock.patch.object(startup_error, "back_to_main_offer", return_value="issue-40"), \
+            mock.patch.object(startup_error, "back_to_main", back_to_main):
+        server = MessageServer(root)
+        m.send("WebDriver:Navigate", {"url": server.url})
+        set_window(m, *size)
+        s = wait(m, lambda s: s["backShown"] and s["focused"])
+        m.settle()
+        s = m.js(STATE_JS)
+        check(f"{label} on a branch: says which branch, Close focused first, Back to main shown",
+              "This copy is on issue-40." in s["lines"] and s["focused"] and s["backShown"]
+              and s["focusedCount"] == 1, s)
+        m.press(RIGHT)
+        s = wait(m, lambda s: s["backFocused"], 3)
+        b, bar = s["back"], s["bar"]
+        if shots:
+            shot = m.send("WebDriver:TakeScreenshot", {"full": False})["value"]
+            (shots / f"startup-error-branch-{label}.png").write_bytes(base64.b64decode(shot))
+        check(f"{label} on a branch: Right focuses Back to main, in view, the hint says so",
+              s["backFocused"] and s["focusedCount"] == 1 and b[0] >= 0 and b[2] <= s["w"] + 0.5
+              and b[1] >= 0 and b[3] <= bar[1] + 0.5 and s["hints"] == "A Back to main B Close",
+              {"back": b, "bar": bar, "hints": s["hints"], "focused": s["backFocused"]})
+        check(f"{label} on a branch: no sideways scroll", s["scrollW"] <= s["w"], [s["scrollW"], s["w"]])
+        m.press(" ")
+        s = wait(m, lambda s: s["status"] and not s["backShown"], 5)
+        check(f"{label} on a branch: A goes back to main once, says so, Close focused again",
+              asked == [True] and s["status"] == try_branch.BACK_ON_MAIN_AT_START and not s["backShown"]
+              and s["focused"] and s["hints"] == "A Close B Close", s)
+        check(f"{label} on a branch: still open after going back", not server.closed(0.3))
+        m.press("q")
+        check(f"{label} on a branch: B closes it", server.closed())
+
+
 def check_presses(m, root, check):
     for name, key in KEYS.items():
         server = MessageServer(root)
@@ -179,6 +234,8 @@ def run(env, profile, check, shots):
             m = Marionette(mport)
             for label, size in SIZES.items():
                 check_size(m, root, label, size, check, shots)
+            for label, size in SIZES.items():
+                check_branch(m, root, label, size, check, shots)
             check_presses(m, root, check)
         finally:
             if m is not None:

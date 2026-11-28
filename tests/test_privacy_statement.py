@@ -67,6 +67,14 @@ ALLOWED = {
         "promise": ["Update and restart", "downloads the new version from GitHub",
                     "Pull the latest version"],
     },
+    # Try a branch (the "Try a branch" work), development copies only: git
+    # ls-remote, GitHub's open pull requests, then git fetch of the branch
+    # chosen. Back to main and Restore never go online.
+    "backend/try_branch.py": {
+        "markers": {"import urllib.request", "url api.github.com", "word fetch", "word ls-remote"},
+        "promise": ["Try a branch", "asks GitHub for this project's open pull requests",
+                    "Back to main and Restore data from before the last switch never go online"],
+    },
     # The one-file installer (the one-file install work): after the viewer
     # opens it and says yes, GitHub's latest release and its two files from
     # this app's releases (tests/test_one_file_install.py checks the order).

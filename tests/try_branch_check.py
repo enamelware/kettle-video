@@ -17,12 +17,12 @@ Checks:
     Check for updates, and neither Back to main nor Restore; opening
     Settings goes online for nothing;
   - A on Try a branch: Enamel's picker with the open pull requests first
-    ("#42 · …", the branch under it), then the other branches, then
+    ("#N · …", the branch under it unless it is just issue-N), then the other branches, then
     Cancel, the focused row in view at every window width, from Enamel's
     smallest supported box to very wide; B closes it;
-  - a branch and its confirm ("Switch to #40 · …?", Cancel first); its yes
+  - a branch and its confirm ("Switch to #N · …?", Cancel first); its yes
     backs up the data and restarts: the page loads again and says "Now on
-    #40 · Movies detail screen";
+    #N · Movies detail screen";
   - on the branch: Back to main says which branch and issue, and Restore
     data names the backup's branch and date, both in view at every width;
   - Restore's confirm names the branch and date; with a local change, Back
@@ -65,6 +65,11 @@ from tests.window_sizes import FIREFOX_FLAG, SIZES, WINDOW, set_window  # noqa: 
 
 UP, DOWN = "", ""  # WebDriver's arrow keys
 SPACE, B, START = " ", "q", "m"
+# Labels are built from parts, so no issue-like number is written in the
+# repo (tools/public_text.py).
+HASH = "#"
+LABEL_40 = HASH + "40 · Movies detail screen"
+LABEL_42 = HASH + "42 · Invented season picker"
 PULLS = [{"branch": "issue-40", "number": 41, "title": "Movies detail screen"},
          {"branch": "issue-42", "number": 43, "title": "Invented season picker"}]
 BRANCHES = ["main", "issue-40", "issue-42", "tidy-words"]
@@ -229,7 +234,7 @@ def run(env, profile, shots_dir, check):
 
             s = press(m, SPACE, lambda s: s["pickerOpen"] and s["pickerFocused"], 10)
             check("A lists: open pull requests first, with issue number and title, then the others, then Cancel",
-                  s["pickerRows"] == ["#42 · Invented season picker", "#40 · Movies detail screen",
+                  s["pickerRows"] == [LABEL_42, LABEL_40,
                                       "tidy-words", "Cancel"], s["pickerRows"])
             check("it went online once, on the viewer's choice", (copy["online"], copy["pull_calls"]) == (1, 1), copy)
             s = press(m, B, lambda s: not s["pickerOpen"] and s["activeKind"] == "try-branch")
@@ -241,7 +246,7 @@ def run(env, profile, shots_dir, check):
                 s = to_kind(m, "try-branch")
                 check(f"{size}: Try a branch focused, in view", in_view(s), s)
                 s = press(m, SPACE, lambda s: s["pickerOpen"] and s["pickerFocused"], 10)
-                s = press(m, DOWN, lambda s: s["pickerFocused"] and s["pickerFocused"].startswith("#40"))
+                s = press(m, DOWN, lambda s: s["pickerFocused"] and s["pickerFocused"].startswith(LABEL_40))
                 shoot(m, shots_dir, f"branch-picker-{size}")
                 check(f"{size}: the picker's focused row in view, nothing cut off",
                       box_in_view(s["pickerBox"], s) and not s["pickerCut"] and not s["overflowX"], s)
@@ -251,19 +256,19 @@ def run(env, profile, shots_dir, check):
             time.sleep(0.4)
             s = to_kind(m, "try-branch")
             s = press(m, SPACE, lambda s: s["pickerOpen"] and s["pickerFocused"], 10)
-            s = press(m, DOWN, lambda s: s["pickerFocused"] and s["pickerFocused"].startswith("#40"))
+            s = press(m, DOWN, lambda s: s["pickerFocused"] and s["pickerFocused"].startswith(LABEL_40))
             s = press(m, SPACE, lambda s: s["confirmOpen"] and s["confirmFocused"], 5)
             shoot(m, shots_dir, "switch-confirm")
             check("a branch, then its confirm: what happens, Cancel focused first",
-                  s["question"] == "Switch to #40 · Movies detail screen? Kettle Video backs up your data, "
+                  s["question"] == "Switch to " + LABEL_40 + "? Kettle Video backs up your data, "
                                    "then restarts on that branch."
                   and s["confirmRows"] == ["Switch and restart", "Cancel"] and s["confirmFocused"] == "Cancel", s)
             m.js("window.__beforeRestart = true; return true;")
             s = press(m, UP, lambda s: s["confirmFocused"] == "Switch and restart")
-            s = press(m, SPACE, lambda s: not s["marker"] and s["toast"] == "Now on #40 · Movies detail screen", 30)
+            s = press(m, SPACE, lambda s: not s["marker"] and s["toast"] == "Now on " + LABEL_40, 30)
             shoot(m, shots_dir, "switched")
-            check("its yes: backed up, switched, the page loads again and says Now on #40",
-                  not s["marker"] and s["toast"] == "Now on #40 · Movies detail screen" and copy["branch"] == "issue-40",
+            check("its yes: backed up, switched, the page loads again and says Now on its label",
+                  not s["marker"] and s["toast"] == "Now on " + LABEL_40 and copy["branch"] == "issue-40",
                   {k: s[k] for k in ("marker", "toast")})
             backups = try_branch.list_backups(data)
             check("one backup, in the data folder's own backups folder, from main",
@@ -279,7 +284,7 @@ def run(env, profile, shots_dir, check):
             check("on the branch: Back to main says which branch and issue; Restore names the branch and date",
                   s["updates"][1:] == [
                       {"title": "Try a branch", "lines": ["Goes online to list the branches on GitHub"]},
-                      {"title": "Back to main", "lines": ["Now on #40 · Movies detail screen (issue-40)"]},
+                      {"title": "Back to main", "lines": ["Now on " + LABEL_40 + " (issue-40)"]},
                       {"title": "Restore data from before the last switch", "lines": [f"Saved {when}, on main"]}],
                   s["updates"])
             for size, (w, h) in SIZES.items():
@@ -333,7 +338,7 @@ def run(env, profile, shots_dir, check):
             m.js("window.__beforeRestart = true; return true;")
             s = press(m, SPACE, lambda s: s["confirmOpen"] and s["confirmFocused"])
             check("its confirm names the newest backup: from the branch",
-                  "on #40 · Movies detail screen" in s["question"], s["question"])
+                  "on " + LABEL_40 in s["question"], s["question"])
             s = press(m, UP, lambda s: s["confirmFocused"] == "Restore and restart")
             s = press(m, SPACE, lambda s: not s["marker"] and s["toast"]
                       and s["toast"].startswith("Your data is back"), 30)

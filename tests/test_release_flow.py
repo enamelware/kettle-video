@@ -388,6 +388,10 @@ class NoSwitchForPreReleases(unittest.TestCase):
         found = []
         for path in self.shipped():
             for url in re.findall(r"api\.github\.com/repos/[^\s\"'`)]*", self.text(path)):
+                # Try a branch's open pull request list (development copies
+                # only) is the one address that isn't release information.
+                if path == "backend/try_branch.py" and "/pulls?" in url:
+                    continue
                 found.append(url)
                 self.assertRegex(url, r"/releases/latest$", f"{path}: {url}")
         self.assertTrue(found)

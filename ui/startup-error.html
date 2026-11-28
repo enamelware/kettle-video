@@ -23,10 +23,15 @@
        couldn't start, the last where the log is. -->
   <main id="startup-error" class="full-message startup-error" role="alert">
     <div data-role="lines"></div>
+    <!-- Back to main (the "Try a branch" work): shown only on a development
+         copy on a branch that couldn't start; its answer goes in the status
+         line. Close stays first in focus. -->
+    <p class="startup-error-status" data-role="status" role="status" hidden></p>
+    <button type="button" class="startup-error-main en-button" tabindex="-1" data-kind="back-to-main" hidden>Back to main</button>
     <button type="button" class="startup-error-close en-button en-button--primary" tabindex="-1" data-kind="close">Close</button>
   </main>
   <footer class="hint-bar en-hintbar">
-    <span class="hint en-hint"><span class="button-glyph en-glyph" aria-hidden="true">A</span> Close</span>
+    <span class="hint en-hint"><span class="button-glyph en-glyph" aria-hidden="true">A</span> <span data-role="a-hint">Close</span></span>
     <span class="hint en-hint"><span class="button-glyph en-glyph" aria-hidden="true">B</span> Close</span>
   </footer>
   <script type="module" src="js/startup_error.js"></script>

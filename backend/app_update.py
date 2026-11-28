@@ -540,7 +540,7 @@ class Updater:
         with self.lock:
             self.listed = {row["branch"]: row["label"] for row in rows}
         self.log(f"try a branch: {len(rows)} branches listed, "
-                 f"{sum(1 for row in rows if row['pull'])} with an open pull request")
+                 f"{sum(1 for row in rows if row['open_pull'])} with an open pull request")
         if not rows:
             return {"ok": False, "text": try_branch.NO_BRANCHES}
         return {"ok": True, "branches": rows, "titles": titles}

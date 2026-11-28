@@ -18,6 +18,11 @@ this module in two ways:
 REASON is one of REASONS. The module imports nothing from the app beyond the
 settings reader, which it only uses to name a settings mistake: whatever
 stopped the app's own server from starting must not stop this one too.
+
+Back to main (the "Try a branch" work): on a development copy on a branch
+that couldn't start, the page also offers Back to main, so a device is never
+stuck on a broken branch. Its parts are imported only when needed, and if
+they fail the page simply doesn't offer it.
 """
 
 import json
@@ -115,9 +120,55 @@ def lines(reason: str, log_file: str, root: Path = REPO, environ=None) -> list:
             "Attach it if you report this on GitHub."]
 
 
-def make_handler(reason: str, log_file: str, port: int, root: Path, stop):
+def back_to_main_offer(reason: str, root: Path = REPO, environ=None):
+    """The branch a development copy is on, when the page should offer Back
+    to main (the "Try a branch" work): the app itself stopped or never got
+    ready, settings.json has no mistake (main would have it too), and the
+    copy isn't on main. None otherwise, and whenever anything unexpected
+    happens: a branch that can't start may have broken these parts too."""
+    if reason not in (BACKEND_STOPPED, BACKEND_SILENT):
+        return None
+    try:
+        from backend import try_branch, update_check
+        if not update_check.is_development(root) or settings_problem(root, environ):
+            return None
+        branch = try_branch.current_branch(root, update_check._git)
+        if branch == try_branch.MAIN:
+            return None
+        return branch or try_branch.head(root, update_check._git)[:7]
+    except Exception:
+        return None
+
+
+def back_to_main(root: Path = REPO, environ=None, git=None, now=None) -> dict:
+    """Back to main from this page: {"ok", "text"}, the plain words to show.
+    Never online; nothing changed unless ok."""
+    failed = "Couldn't go back to main. Nothing was changed."
+    try:
+        from datetime import datetime
+        from backend import app_paths, try_branch, update_check
+        from backend.settings import load_settings
+        failed = try_branch.BACK_AT_START_FAILED
+        environ = os.environ if environ is None else environ
+        if not update_check.is_development(root):
+            return {"ok": False, "text": failed}
+        paths = app_paths.for_app(root, environ)
+        settings = load_settings(root, paths)
+        text = try_branch.back_to_main_at_start(
+            root, git or update_check._git, Path(settings.get("data_dir") or paths.logs_dir),
+            paths.settings_file, [settings.get("movies_path"), settings.get("tv_path")], environ,
+            (now or datetime.now)())
+        return {"ok": True, "text": text}
+    except Exception as exc:
+        said = str(exc) if type(exc).__name__ == "Refused" else failed
+        return {"ok": False, "text": said}
+
+
+def make_handler(reason: str, log_file: str, port: int, root: Path, stop, environ=None):
     expected_host = f"127.0.0.1:{port}"
-    message = {"lines": lines(reason, log_file, root)}
+    message = {"lines": lines(reason, log_file, root, environ),
+               "back_to_main": back_to_main_offer(reason, root, environ)}
+    switched = threading.Lock()
 
     class Handler(SimpleHTTPRequestHandler):
         def end_headers(self):
@@ -159,6 +210,18 @@ def make_handler(reason: str, log_file: str, port: int, root: Path, stop):
                 print("start-up message closed", flush=True)
                 self._send_json(HTTPStatus.OK, {"ok": True})
                 return stop()
+            if self.path == "/api/back-to-main":
+                # Only where the page offered it, and once.
+                if not message["back_to_main"] or not switched.acquire(blocking=False):
+                    return self._send_json(HTTPStatus.CONFLICT, {"ok": False, "text": ""})
+                answer = back_to_main(root, environ)
+                print(f"start-up message: back to main from {message['back_to_main']}: "
+                      f"{'done' if answer['ok'] else answer['text']}", flush=True)
+                if answer["ok"]:
+                    message["back_to_main"] = None
+                else:
+                    switched.release()
+                return self._send_json(HTTPStatus.OK, answer)
             if self.path == "/api/shown":
                 print("start-up message shown", flush=True)
                 return self._send_json(HTTPStatus.OK, {"ok": True})

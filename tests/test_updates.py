@@ -456,7 +456,9 @@ class Server(unittest.TestCase):
         with no_way_out(self) as tried, mock.patch.object(update_check, "is_development", return_value=False):
             self.start()
             _, answer, _ = self.request("GET", "/api/settings")
-        self.assertEqual(answer["updates"], {"last_checked": "Last checked: never", "development": False})
+        # branches: None, a release install has no Try a branch rows (the "Try a branch" work).
+        self.assertEqual(answer["updates"], {"last_checked": "Last checked: never", "development": False,
+                                             "branches": None})
         self.assertEqual(tried, [])
 
     def test_only_the_settings_action_checks(self):

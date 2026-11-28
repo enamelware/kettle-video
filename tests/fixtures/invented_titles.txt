@@ -171,6 +171,18 @@ Movies
 TV Shows
 Update and Restart
 Kettle (webview spike)
+Try a branch
+Back to main
+Restore data from before the last switch
+
+# Invented pull request titles and file names in the "Try a branch" tests.
+Movies detail screen
+Invented season picker
+Invented tidy-up
+A branch no longer there
+Invented
+Refs
+a-shortcut
 
 # The sample library (docs/sample-library.md): Blender open movies under
 # Creative Commons licences, the one set of real films the repo may name

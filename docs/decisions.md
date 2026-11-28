@@ -1384,3 +1384,17 @@ A minimal Settings screen, from Home's menu: change the Movies and TV Shows fold
 **Builder's choices** (decided, within the designer's rule): the answer must be the word `yes` (a `y` uploads nothing), so a reflex keypress can't publish; the upload passes `--latest=false` as well as `--prerelease`, and `--verify-tag`, so `gh` never makes a tag of its own from `main`; and Check for updates also refuses an answer marked pre-release or draft, as the one-file installer already does, although GitHub's "latest" never gives one.
 
 **Reason:** users get only what was tested on the devices, a release can only go public with the designer's explicit yes, and nothing about publishing is stored in the repo or on the devices.
+
+
+## 2026-11-28 — Try a branch: backups before every switch, Back to main also on the start-up problem page (the "Try a branch" work)
+
+**Decision (the designer's):** development copies can try any branch from Settings › About, open pull requests first, and go back to main; the data is backed up before every switch, in a `backups` folder inside the copy's own data folder, keeping the last 3; Restore puts back the newest one after a confirm naming its branch and date. Release installs never show any of it.
+
+**Builder's choices** (decided, within the designer's rule):
+- **Not in the backup:** the kiosk Firefox profile (the app keeps nothing in it, and Firefox has it open while the app runs), mpv's resume positions (mpv's own folder, shared with any other use of mpv), the logs and temporary folders. The data folder and `settings.json` are.
+- **A branch that doesn't start is left again** before the restart (the installer's own start check), and that switch's backup removed, so a failed try leaves nothing behind.
+- **A local branch is only ever moved forward**, never reset, and nothing is ever stashed or discarded: with changes of its own the copy doesn't switch.
+- **Back to main on the start-up problem page**, so a device is never stuck on a branch that can't start: shown only on a development copy on a branch, when `settings.json` has no mistake (main would have it too). It follows the same rules as in Settings, then asks to start Kettle Video again by hand: `launch.sh` isn't changed to restart by itself.
+- **The picker row leaves out the branch name when it is just `issue-N`**, so a long title still fits Enamel's picker in the smallest window.
+
+**Reason:** testing a branch must never lose the library, Continue watching or the folders, nor leave a device on a broken copy; the start-up page is the one screen still reachable when a branch can't start.

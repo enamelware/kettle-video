@@ -21,7 +21,9 @@ and this repository's own git state is never touched.
   - a branch that doesn't start cleanly is left again, its backup removed;
   - Restore asks for the newest backup by its id, names its branch and
     date, and puts the data back exactly;
-  - a data folder that isn't the copy's own is never backed up or restored.
+  - a data folder that isn't the copy's own is never backed up or restored;
+  - on the start-up problem screen, a branch that couldn't start offers
+    Back to main, which follows the same rules, never online.
 
 Run: scripts/test.sh unit tests.test_try_branch
 """
@@ -40,13 +42,18 @@ from http.server import ThreadingHTTPServer
 from pathlib import Path
 from unittest import mock
 
-from backend import app_update, try_branch, update_check
+from backend import app_update, startup_error, try_branch, update_check
 from backend import server as server_module
 from backend.server import make_handler
 from tests.test_app_update import UI_DIR, git, wait_for
 
+# Labels are built from parts, so no issue-like number is written in the
+# repo (tools/public_text.py).
+HASH = "#"
+LABEL_40 = HASH + "40 · Movies detail screen"
+LABEL_42 = HASH + "42 · Invented season picker"
 PULLS = [{"branch": "issue-40", "number": 41, "title": "Movies detail screen"},
-         {"branch": "issue-42", "number": 43, "title": "Refs #43: Invented season picker"},
+         {"branch": "issue-42", "number": 43, "title": "Refs " + HASH + "43: Invented season picker"},
          {"branch": "gone-away", "number": 44, "title": "A branch no longer there"}]
 
 
@@ -187,10 +194,10 @@ class TheList(DevelopmentCopy):
         answer = self.updater().list_branches()
         self.assertTrue(answer["ok"])
         self.assertTrue(answer["titles"])
-        rows = [(r["branch"], r["label"], r["desc"], r["pull"]) for r in answer["branches"]]
+        rows = [(r["branch"], r["label"], r["desc"], r["open_pull"]) for r in answer["branches"]]
         self.assertEqual(rows, [
-            ("issue-42", "#42 · Invented season picker", None, True),
-            ("issue-40", "#40 · Movies detail screen", None, True),
+            ("issue-42", LABEL_42, None, True),
+            ("issue-40", LABEL_40, None, True),
             ("tidy-words", "tidy-words", None, False),
         ])
         self.assertEqual(self.pull_calls, ["0.2.0-dev"])
@@ -199,7 +206,7 @@ class TheList(DevelopmentCopy):
     def test_a_pull_request_branch_not_named_after_its_issue_keeps_its_name_under_the_title(self):
         rows = try_branch.picker_list(["main", "tidy-words"],
                                       [{"branch": "tidy-words", "number": 44, "title": "Invented tidy-up"}], "main")
-        self.assertEqual([(r["label"], r["desc"]) for r in rows], [("#44 · Invented tidy-up", "tidy-words")])
+        self.assertEqual([(r["label"], r["desc"]) for r in rows], [(HASH + "44 · Invented tidy-up", "tidy-words")])
 
     def test_without_the_pull_request_list_the_branches_are_still_listed(self):
         self.pulls = update_check.CheckFailed("GitHub answered 403")
@@ -237,7 +244,7 @@ class Switching(DevelopmentCopy):
         self.switch(updater)
         self.assertEqual(self.branch(), "issue-40")
         self.assertEqual((self.copy / "app.txt").read_text(), "invented issue-40\n")
-        self.assertEqual(self.restarts, [(self.copy, "Now on #40 · Movies detail screen")])
+        self.assertEqual(self.restarts, [(self.copy, "Now on " + LABEL_40)])
         self.assertEqual(self.checks, [(self.copy, "issue-40")])
         backups = try_branch.list_backups(self.data)
         self.assertEqual(len(backups), 1)
@@ -320,7 +327,7 @@ class Switching(DevelopmentCopy):
         self.assertEqual(try_branch.list_backups(self.data), [])
         self.assertEqual(self.restarts, [])
         self.assertEqual(updater.status()["text"], try_branch.didnt_start_text(
-            "#40 · Movies detail screen", "main", "it stopped as soon as it started."))
+            LABEL_40, "main", "it stopped as soon as it started."))
 
     def test_a_local_branch_with_commits_of_its_own_is_never_moved(self):
         git(self.copy, "switch", "--quiet", "-c", "issue-40")
@@ -358,7 +365,7 @@ class Switching(DevelopmentCopy):
         self.switch(self.updater())
         self.git_calls.clear()
         updater = self.updater()
-        self.assertEqual(updater.branch_state()["on"], {"branch": "issue-40", "label": "#40 · Movies detail screen"})
+        self.assertEqual(updater.branch_state()["on"], {"branch": "issue-40", "label": LABEL_40})
         self.assertIsNone(updater.start_back_to_main())
         self.finish(updater, 1)
         self.assertEqual(self.branch(), "main")
@@ -545,18 +552,114 @@ class TheServer(DevelopmentCopy):
                          (409, {"ok": False, "text": try_branch.NOT_LISTED}))
         status, answer = self.request("POST", "/api/branches/list", {})
         self.assertEqual(status, 200)
-        self.assertEqual(answer["branches"][1]["label"], "#40 · Movies detail screen")
+        self.assertEqual(answer["branches"][1]["label"], LABEL_40)
         status, answer = self.request("POST", "/api/branches/switch", {"branch": "issue-40"})
         self.assertEqual(status, 200)
         self.assertTrue(answer["ok"])
         wait_for(lambda: self.restarts, 30)
-        self.assertEqual(self.restarts, [(self.copy, "Now on #40 · Movies detail screen")])
+        self.assertEqual(self.restarts, [(self.copy, "Now on " + LABEL_40)])
         status, answer = self.request("GET", "/api/updates/status")
         self.assertIn("running", answer)
-        self.assertEqual(self.settings_branches()["on"]["label"], "#40 · Movies detail screen")
+        self.assertEqual(self.settings_branches()["on"]["label"], LABEL_40)
         self.assertEqual(self.request("POST", "/api/branches/switch", {})[0], 400)
         self.assertEqual(self.request("POST", "/api/branches/restore", {"id": "nope"}),
                          (409, {"ok": False, "text": try_branch.NO_BACKUP}))
+
+
+class FromTheStartUpProblemScreen(DevelopmentCopy):
+    """Back to main when a branch couldn't start, so a device is never stuck
+    on a broken branch."""
+
+    def setUp(self):
+        super().setUp()
+        settings = {"data_dir": str(self.data), "movies_path": str(self.tmp / "Films"), "tv_path": ""}
+        patcher = mock.patch("backend.settings.load_settings", return_value=settings)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        self.environ = {"HOME": str(self.home)}
+
+    def on_branch(self, branch="issue-40"):
+        git(self.copy, "switch", "--quiet", branch)
+
+    def offer(self, reason=startup_error.BACKEND_STOPPED):
+        return startup_error.back_to_main_offer(reason, self.copy, self.environ)
+
+    def back(self):
+        return startup_error.back_to_main(self.copy, self.environ, now=self.now)
+
+    def test_offered_only_on_a_branch_when_the_app_itself_didnt_start(self):
+        self.assertIsNone(self.offer())
+        self.on_branch()
+        self.assertEqual(self.offer(), "issue-40")
+        self.assertEqual(self.offer(startup_error.BACKEND_SILENT), "issue-40")
+        self.assertIsNone(self.offer(startup_error.NO_FIREFOX))
+        with mock.patch.object(startup_error, "settings_problem", return_value="invented mistake"):
+            self.assertIsNone(self.offer())
+        (self.copy / "kettle-video-installed").write_text("")
+        self.assertIsNone(self.offer())
+
+    def test_backs_up_then_goes_back_to_main_never_online(self):
+        self.on_branch()
+        before = snapshot(self.data)
+        with mock.patch.object(try_branch, "fetch_pulls", side_effect=AssertionError("online")):
+            answer = self.back()
+        self.assertEqual(answer, {"ok": True, "text": try_branch.BACK_ON_MAIN_AT_START})
+        self.assertEqual(self.branch(), "main")
+        backups = try_branch.list_backups(self.data)
+        self.assertEqual(len(backups), 1)
+        self.assertEqual((backups[0]["from"], backups[0]["to"]), ("issue-40", "main"))
+        self.assertEqual(snapshot(backups[0]["path"] / try_branch.DATA), before)
+        self.assertEqual(snapshot(self.data, skip=(try_branch.BACKUPS,)), before)
+        self.assertNotIn(self.film.name, json.dumps(snapshot(backups[0]["path"]), default=str))
+
+    def test_refuses_with_local_changes_and_leaves_everything(self):
+        self.on_branch()
+        (self.copy / "app.txt").write_text("a change of its own\n")
+        answer = self.back()
+        self.assertEqual(answer, {"ok": False, "text": try_branch.LOCAL_CHANGES})
+        self.assertEqual(self.branch(), "issue-40")
+        self.assertEqual(try_branch.list_backups(self.data), [])
+
+    def test_a_failed_backup_stops_it(self):
+        self.on_branch()
+        with mock.patch.object(try_branch, "make_backup", side_effect=OSError("full")):
+            answer = self.back()
+        self.assertEqual(answer, {"ok": False, "text": try_branch.BACKUP_FAILED})
+        self.assertEqual(self.branch(), "issue-40")
+
+    def test_a_release_install_never_switches(self):
+        self.on_branch()
+        (self.copy / "kettle-video-installed").write_text("")
+        self.assertFalse(self.back()["ok"])
+        self.assertEqual(self.branch(), "issue-40")
+        self.assertEqual(try_branch.list_backups(self.data), [])
+
+    def test_the_page_server_offers_it_and_answers_once(self):
+        self.on_branch()
+        httpd = ThreadingHTTPServer(("127.0.0.1", 0), None)  # the handler needs the port first
+        port = httpd.server_address[1]
+        httpd.RequestHandlerClass = startup_error.make_handler(
+            startup_error.BACKEND_STOPPED, "launch-invented.log", port, self.copy, lambda: None, self.environ)
+        threading.Thread(target=httpd.serve_forever, daemon=True).start()
+        self.addCleanup(httpd.server_close)
+        self.addCleanup(httpd.shutdown)
+
+        def ask(method, path):
+            conn = http.client.HTTPConnection("127.0.0.1", port, timeout=10)
+            conn.request(method, path, body="{}" if method == "POST" else None,
+                         headers={"Content-Type": "application/json"})
+            answer = conn.getresponse()
+            data = json.loads(answer.read())
+            conn.close()
+            return answer.status, data
+
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            self.assertEqual(ask("GET", "/api/startup-error")[1]["back_to_main"], "issue-40")
+            self.assertEqual(ask("POST", "/api/back-to-main"),
+                             (200, {"ok": True, "text": try_branch.BACK_ON_MAIN_AT_START}))
+            self.assertIsNone(ask("GET", "/api/startup-error")[1]["back_to_main"])
+            self.assertEqual(ask("POST", "/api/back-to-main")[0], 409)
+        self.assertEqual(self.branch(), "main")
 
 
 if __name__ == "__main__":

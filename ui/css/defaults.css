@@ -275,6 +275,7 @@ body[data-show-paths] .row-path {
    so is Close on the start-up problem page (the start-up problem screen). */
 .mpv-look-again,
 .startup-error-close,
+.startup-error-main,
 .no-videos-action,
 .result-action {
   max-width: 100%;
@@ -286,6 +287,12 @@ body[data-show-paths] .row-path {
   display: flex;
   width: fit-content;
   margin-top: var(--en-space-inset);
+}
+
+/* Back to main on the start-up problem page (the "Try a branch" work):
+   beside Close, or above it when they don't fit side by side. */
+.startup-error-main {
+  margin: var(--en-lift);
 }
 
 /* Screen 3 (the first scan screen): Enamel's progress, stat pair and notes, in that order,
