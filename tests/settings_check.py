@@ -51,7 +51,7 @@ from unittest import mock
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO))
 
-from backend import folder_dialog, folder_finder, library_index, settings_screen  # noqa: E402
+from backend import app_update, folder_dialog, folder_finder, library_index, settings_screen  # noqa: E402
 from backend.server import make_handler  # noqa: E402
 from tests.loading_screen_check import UI_DIR, Marionette, free_port  # noqa: E402
 from tests.window_sizes import FIREFOX_FLAG, SIZES, WINDOW, set_window  # noqa: E402
@@ -367,7 +367,10 @@ def run(env, profile, shots_dir, check):
         try:
             with mock.patch.object(library_index, "full_scan", side_effect=counted), \
                     mock.patch.object(folder_finder, "list_places", lambda: places), \
-                    mock.patch.object(folder_dialog, "find", lambda: None):
+                    mock.patch.object(folder_dialog, "find", lambda: None), \
+                    mock.patch.object(app_update.Updater, "can_switch", lambda self: False):
+                # No Try a branch rows: this folder is a development copy, and
+                # they would go online (tests/try_branch_check.py has them).
                 m = Marionette(mport)
                 m.send("WebDriver:Navigate", {"url": f"http://127.0.0.1:{port}/"})
                 set_window(m, *WINDOW)
