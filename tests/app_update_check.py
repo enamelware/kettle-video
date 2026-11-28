@@ -361,7 +361,8 @@ def run(env, profile, shots_dir, check):
             s = to_kind(m, "update-check")
             s = press(m, SPACE, lambda s: len(s["updates"]) == 2, 10)
             check("a development copy: Pull the latest version under Check for updates",
-                  [u["title"] for u in s["updates"]] == ["Check for updates", "Pull the latest version"], s["updates"])
+                  # Try a branch's rows follow on a development copy (the "Try a branch" work, its own check).
+                  [u["title"] for u in s["updates"]][:2] == ["Check for updates", "Pull the latest version"], s["updates"])
             s = press(m, DOWN, lambda s: s["activeKind"] == "pull-latest")
             s = press(m, SPACE, lambda s: s["confirmOpen"] and s["confirmFocused"])
             shoot(m, shots_dir, "pull-confirm")
